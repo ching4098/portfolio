@@ -50,18 +50,8 @@ const PROFILE = {
     github: "https://github.com/ching4098",
     linkedin: "https://linkedin.com/in/zxching",
   },
-  now: {
-    title: "Undergraduate Research Assistant · INTEGRATE @ UW–Madison",
-    period: "May 2025 – Present",
-    bullets: [
-      "Designed pipelines to capture & process study data; saved ~6.5 hours of manual work.",
-      "Wrote Python sims to run 12 study runs/user; validated pseudo-random task assignment.",
-      "Reduced selection bias by ≥85%; co-designed study scope & interactions.",
-      "Defined VR interaction flows; pilot runs saw ~20% fewer usability issues.",
-    ],
-  },
-  experience: [
-    {
+  now:     
+  {
       role: "Undergraduate Research Assistant",
       org: "MadAbility Lab @ UW–Madison",
       period: "Oct 2024 – Present · Madison, WI",
@@ -71,6 +61,17 @@ const PROFILE = {
         "Integrated ChatGPT API into research tooling for responsive workflows.",
         "Parallelized computational functions for high-volume data handling.",
       ],
+  },
+  experience: [
+    {
+    title: "Undergraduate Research Assistant · INTEGRATE @ UW–Madison",
+    period: "May 2025 – Present",
+    bullets: [
+      "Designed pipelines to capture & process study data; saved ~6.5 hours of manual work.",
+      "Wrote Python sims to run 12 study runs/user; validated pseudo-random task assignment.",
+      "Reduced selection bias by ≥85%; co-designed study scope & interactions.",
+      "Defined VR interaction flows; pilot runs saw ~20% fewer usability issues.",
+    ],
     },
     {
       role: "Software Engineer Intern",
