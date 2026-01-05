@@ -52,26 +52,23 @@ const PROFILE = {
   },
   now:     
   {
-      role: "Undergraduate Research Assistant",
-      org: "MadAbility Lab @ UW–Madison",
-      period: "Oct 2024 – Present · Madison, WI",
-      highlights: [
-        "Advanced data annotation for VR datasets to support model training.",
-        "Developed functions to query ML models and streamline analysis.",
-        "Integrated ChatGPT API into research tooling for responsive workflows.",
-        "Parallelized computational functions for high-volume data handling.",
-      ],
+    title: "Undergraduate Research Assistant · MadAbility Lab @ UW–Madison",
+    period: "Oct 2024 – Present",
+    bullets: [
+      "Currently working on some more stuff that I can't officially share ;)"
+    ],
   },
   experience: [
     {
-    title: "Undergraduate Research Assistant · INTEGRATE @ UW–Madison",
-    period: "May 2025 – Present",
-    bullets: [
-      "Designed pipelines to capture & process study data; saved ~6.5 hours of manual work.",
-      "Wrote Python sims to run 12 study runs/user; validated pseudo-random task assignment.",
-      "Reduced selection bias by ≥85%; co-designed study scope & interactions.",
-      "Defined VR interaction flows; pilot runs saw ~20% fewer usability issues.",
-    ],
+      role: "Undergraduate Research Assistant",
+      org: "INTEGRATE @ UW–Madison",
+      period: "May 2025 – Nov 2025",
+      highlights: [
+        "Designed pipelines to capture & process study data; saved ~6.5 hours of manual work.",
+        "Wrote Python sims to run 12 study runs/user; validated pseudo-random task assignment.",
+        "Reduced selection bias by ≥85%; co-designed study scope & interactions.",
+        "Defined VR interaction flows; pilot runs saw ~20% fewer usability issues.",
+      ],
     },
     {
       role: "Software Engineer Intern",
@@ -455,7 +452,7 @@ export default function App() {
                       ))}
                     </motion.ul>
                   </CardContent>
-                  <CardFooter className="text-xs text-neutral-500">Open to challenging internships & collaborations.</CardFooter>
+                  <CardFooter className="text-xs text-neutral-500">Open to full-time work & research opportunities.</CardFooter>
                 </Card>
               </motion.div>
             </div>
