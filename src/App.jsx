@@ -7,6 +7,7 @@ import {
   animate,
   useMotionValue,
 } from "framer-motion";
+import { Analytics } from "@vercel/analytics/react";
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -615,6 +616,7 @@ export default function App() {
           </div>
         </footer>
       </div>
+      <Analytics />
     </MotionConfig>
   );
 }
