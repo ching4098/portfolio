@@ -1,30 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  motion,
-  MotionConfig,
-  useScroll,
-  useTransform,
-  animate,
-  useMotionValue,
-} from "framer-motion";
+import { motion, MotionConfig, useScroll, useTransform, animate } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Mail,
-  Github,
-  Linkedin,
-  FileDown,
-  MapPin,
-  School,
-  BookOpen,
-  Phone,
-} from "lucide-react";
+import { DitherMark } from "@/components/dither-mark";
+import { ScrollProgressGauge } from "@/components/scroll-progress-gauge";
+import { BackgroundShapes } from "@/components/background-shapes";
+import { VerticalLabel } from "@/components/section-marks";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
+import aboutPhoto from "@/assets/about-photo.png";
+import { Mail, Github, Linkedin, FileDown, School, BookOpen } from "lucide-react";
+import resumePdf from "../public/Resume.pdf";
 
-// ----- constants / helpers -----
 const EASE = [0.16, 1, 0.3, 1];
 
-// dev-friendly reveal wrapper
 const Reveal = ({ delay = 0, y = 10, children }) => (
   <motion.div
     initial={{ opacity: 0, y }}
@@ -39,27 +29,37 @@ const Reveal = ({ delay = 0, y = 10, children }) => (
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.02 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } } };
 
-// ----- content (from resume) -----
+function useSectionProgress() {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  return [ref, scrollYProgress];
+}
+
 const PROFILE = {
   name: "Zheng Xue (ZX) Ching",
-  phone: "+1 (608) 217-7160",
-  tagline: "I build fast, kind systems — performance, automation, accessibility.",
-  location: "Madison, WI",
   pronouns: "he/him",
   email: "chingzhengxue@gmail.com",
   links: {
     github: "https://github.com/ching4098",
     linkedin: "https://linkedin.com/in/zxching",
   },
-  now:     
-  {
-    title: "Undergraduate Research Assistant · MadAbility Lab @ UW–Madison",
-    period: "Oct 2024 – Present",
+  now: {
+    title: "Software Engineer · Ad & Affiliate Technology @ Rakuten",
+    period: "May 2026 – Present",
     bullets: [
-      "Currently working on some more stuff that I can't officially share ;)"
+      "Building backend services and microservice architecture for the Ad & Affiliate Technology platform.",
     ],
+    footer: "Open to talk about more interesting research & work opportunities.",
   },
   experience: [
+    {
+      role: "Undergraduate Research Assistant",
+      org: "MadAbility Lab @ UW–Madison",
+      period: "Oct 2024 – Apr 2026",
+      highlights: [
+        "Worked on research I can't officially share yet ;)",
+      ],
+    },
     {
       role: "Undergraduate Research Assistant",
       org: "INTEGRATE @ UW–Madison",
@@ -83,6 +83,22 @@ const PROFILE = {
       ],
     },
   ],
+  whatIDo: [
+    {
+      title: "Backend & microservices",
+      desc: "Designing and shipping backend services and microservice architecture — currently doing this daily on Rakuten's Ad & Affiliate Technology platform.",
+    },
+    {
+      title: "Automation & QA",
+      desc: "Cutting out repetitive manual work with automation and real test coverage, because tested code ships faster and breaks less often.",
+    },
+    {
+      title: "Accessible, human-centered systems",
+      desc: "Research-backed care for the people actually using what I build — shaped by VR-accessibility work published at CHI 2025.",
+    },
+  ],
+  about:
+    "When I'm not knee-deep in a microservice call graph, I'm probably overthinking a pour-over ratio. I got into specialty coffee around the same time I got into distributed systems, and I still can't tell if I'm optimizing for uptime or for extraction time. Professionally curious, unprofessionally caffeinated.",
   projects: [
     {
       title: "Prim’s & Dijkstra’s Visualizer",
@@ -129,18 +145,8 @@ const PROFILE = {
   ],
 };
 
-// import the PDF from src/assets (matches your folder)
-import resumePdf from "../public/Resume.pdf";
-
-// ----- small building blocks -----
 const Pill = ({ children }) => (
-  <motion.span
-    className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs tracking-wide"
-    variants={item}
-    whileHover={{ y: -1 }}
-    transition={{ duration: 0.2, ease: EASE }}
-    layout
-  >
+  <motion.span className="rounded-full border border-border px-2 py-0.5 text-xs tracking-wide" variants={item} layout>
     {children}
   </motion.span>
 );
@@ -151,13 +157,14 @@ function IntroOverlay() {
       initial={{ y: 0 }}
       animate={{ y: "-100%" }}
       transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
-      className="fixed inset-0 z-[60] bg-white flex items-center justify-center pointer-events-none"
+      className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-white"
     >
+      <DitherMark variant="intro" className="h-24 w-20 text-black sm:h-32 sm:w-28" />
       <motion.div
         initial={{ letterSpacing: "0.6em", opacity: 0 }}
         animate={{ letterSpacing: "0.02em", opacity: 1 }}
-        transition={{ duration: 0.5, ease: EASE }}
-        className="text-sm tracking-widest font-medium text-neutral-900 uppercase"
+        transition={{ duration: 0.5, ease: EASE, delay: 0.3 }}
+        className="font-display text-sm uppercase tracking-widest text-black"
       >
         ZX
       </motion.div>
@@ -166,108 +173,98 @@ function IntroOverlay() {
         animate={{ scaleX: 1 }}
         transition={{ duration: 0.45, ease: EASE }}
         style={{ transformOrigin: "center" }}
-        className="absolute bottom-8 left-8 right-8 h-px bg-neutral-900"
+        className="absolute bottom-8 left-8 right-8 h-px bg-black"
       />
     </motion.div>
   );
 }
 
-function NavLink({ href, idKey, children, currentKey, hoveredKey, pulse }) {
+function NavLink({ href, idKey, children, currentKey, pulse, onClick, variant = "item" }) {
   const isActive = currentKey === idKey;
-  const isHover = hoveredKey === idKey;
+  const reduceMotion = usePrefersReducedMotion();
+  const labelClass =
+    variant === "brand"
+      ? "font-display font-semibold tracking-tight text-ink hover:opacity-70"
+      : `hover:opacity-70 ${isActive ? "font-medium" : ""}`;
   return (
-    <a href={href} className="relative inline-flex items-center px-0.5">
-      <span className={`hover:opacity-70 ${isActive ? "font-medium" : ""}`}>{children}</span>
+    <a href={href} onClick={onClick} className="relative inline-flex items-center px-0.5">
+      <span className={labelClass}>{children}</span>
       {isActive && (
         <>
           <motion.span
             layoutId="nav-underline"
-            className="absolute left-0 right-0 -bottom-1 bg-neutral-900 rounded"
-            style={{ height: isHover ? 3 : 2 }}
+            className="absolute left-0 right-0 -bottom-1 h-[2px] rounded bg-ink"
             transition={{ type: "spring", stiffness: 600, damping: 38 }}
           />
-          <motion.span
-            key={`echo-${idKey}-${pulse}`}
-            className="absolute left-0 right-0 -bottom-1 bg-neutral-900/40 rounded"
-            initial={{ scaleX: 1.8, opacity: 0.35, height: isHover ? 4 : 3 }}
-            animate={{ scaleX: 1, opacity: 0, height: 2 }}
-            transition={{ duration: 0.5, ease: EASE }}
-            style={{ transformOrigin: "center" }}
-          />
+          {!reduceMotion && (
+            <motion.span
+              key={`echo-${idKey}-${pulse}`}
+              className="absolute left-0 right-0 -bottom-1 h-[2px] rounded bg-ink/40"
+              initial={{ scaleX: 1.8, opacity: 0.35, height: 3 }}
+              animate={{ scaleX: 1, opacity: 0, height: 2 }}
+              transition={{ duration: 0.5, ease: EASE }}
+              style={{ transformOrigin: "center" }}
+            />
+          )}
         </>
       )}
     </a>
   );
 }
 
-const Section = ({ id, title, children }) => {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 80%", "end 20%"] });
-  const bar = useTransform(scrollYProgress, [0, 1], [0.15, 1]);
+const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, children }) => {
+  const isInk = tone === "ink";
+  const hasVisibleTitle = Boolean(title && title.trim());
+  const headingId = hasVisibleTitle ? `${id}-heading` : labelledBy;
   return (
-    <section ref={ref} id={id} className="max-w-5xl mx-auto px-6 sm:px-8 py-12">
-      {title && title.trim() && (
-        <div className="mb-6">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{title}</h2>
-          </div>
-          <motion.div style={{ scaleX: bar }} className="h-[2px] bg-neutral-900 origin-left" />
-        </div>
-      )}
-      {children}
+    <section
+      id={id}
+      aria-labelledby={headingId}
+      className={`relative grid min-h-screen w-full snap-start items-center overflow-hidden ${isInk ? "dark bg-ink" : ""}`}
+      style={
+        isInk
+          ? { backgroundImage: "var(--crema-wash)", "--wash-x": wash?.x, "--wash-y": wash?.y }
+          : undefined
+      }
+    >
+      <div
+        className={`relative z-20 mx-auto max-w-5xl px-6 py-20 text-foreground sm:px-8 lg:max-w-6xl lg:py-32 xl:max-w-7xl xl:py-40 ${
+          indent === "left" ? "lg:pr-16 xl:pr-28" : indent === "right" ? "lg:pl-16 xl:pl-28" : ""
+        }`}
+      >
+        {hasVisibleTitle && (
+          <p id={headingId} className="mb-6 font-display text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            {title}
+          </p>
+        )}
+        {children}
+      </div>
     </section>
   );
 };
 
-function CountUp({ to = 100, duration = 1.2, suffix = "" }) {
-  const mv = useMotionValue(0);
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    const controls = animate(mv, to, { duration, ease: EASE });
-    const unsub = mv.on("change", (v) => setVal(Math.round(v)));
-    return () => {
-      controls.stop();
-      unsub();
-    };
-  }, [to, duration]);
-  return (
-    <span>
-      {val}
-      {suffix}
-    </span>
-  );
-}
+const SECTION_TONES = {
+  home: "ink",
+  work: "paper",
+  "what-i-do": "ink",
+  projects: "paper",
+  publication: "ink",
+  education: "paper",
+  skills: "ink",
+  about: "paper",
+  contact: "ink",
+};
 
-function MarqueeStrip() {
-  const phrase =
-    "Build fast • Automate the boring stuff • Design for everyone • Sweat the details • Ship, learn, iterate";
-  return (
-    <div className="overflow-hidden border-b border-neutral-200">
-      <motion.div
-        aria-hidden
-        className="flex whitespace-nowrap py-2 text-[11px] sm:text-[12px] tracking-widest uppercase text-neutral-700"
-        initial={{ x: 0 }}
-        animate={{ x: "-50%" }}
-        transition={{ repeat: Infinity, repeatType: "loop", duration: 28, ease: "linear" }}
-      >
-        <span className="mx-6">{phrase}</span>
-        <span className="mx-6">{phrase}</span>
-        <span className="mx-6">{phrase}</span>
-        <span className="mx-6">{phrase}</span>
-      </motion.div>
-    </div>
-  );
-}
-
-// ----- main app -----
 export default function App() {
-  const [hovered, setHovered] = useState(null);
-  const [active, setActive] = useState("work");
+  useDynamicFavicon();
+  const reduceMotion = usePrefersReducedMotion();
+  const [active, setActive] = useState("home");
   const [pulse, setPulse] = useState(0);
   const [showIntro, setShowIntro] = useState(true);
+  const activeTone = SECTION_TONES[active] ?? "paper";
 
   useEffect(() => {
-    const ids = ["work", "projects", "publication", "education", "skills", "contact"];
+    const ids = ["home", "work", "what-i-do", "projects", "publication", "education", "skills", "about", "contact"];
     const sections = ids.map((id) => document.getElementById(id)).filter(Boolean);
     const obs = new IntersectionObserver(
       (entries) => {
@@ -282,19 +279,43 @@ export default function App() {
     return () => obs.disconnect();
   }, []);
 
-  const currentKey = hovered ?? active;
-  useEffect(() => setPulse((p) => p + 1), [currentKey]);
+  useEffect(() => setPulse((p) => p + 1), [active]);
   useEffect(() => {
     const t = setTimeout(() => setShowIntro(false), 900);
     return () => clearTimeout(t);
   }, []);
 
-  const heroRef = useRef(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start end", "end start"] });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, -12]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0.95]);
+  const scrollToSection = (id) => (e) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (!el) return;
+    const targetY = el.getBoundingClientRect().top + window.scrollY;
+    if (reduceMotion) {
+      window.scrollTo(0, targetY);
+      return;
+    }
+    const html = document.documentElement;
+    html.style.scrollSnapType = "none";
+    animate(window.scrollY, targetY, {
+      duration: 0.5,
+      ease: EASE,
+      onUpdate: (v) => window.scrollTo(0, v),
+      onComplete: () => {
+        html.style.scrollSnapType = "";
+      },
+    });
+  };
 
-  // -------- dev-only smoke tests (keep!) --------
+  const heroRef = useRef(null);
+  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ["start end", "end start"] });
+  const heroYRaw = useTransform(heroProgress, [0, 1], [0, -12]);
+  const heroOpacityRaw = useTransform(heroProgress, [0, 1], [1, 0.95]);
+  const heroY = reduceMotion ? 0 : heroYRaw;
+  const heroOpacity = reduceMotion ? 1 : heroOpacityRaw;
+
+  const [workRef, workProgress] = useSectionProgress();
+  const [doRef, doProgress] = useSectionProgress();
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -307,96 +328,84 @@ export default function App() {
       ok(PROFILE.education && PROFILE.education.school.includes("Wisconsin"), "Education not populated");
       const employers = PROFILE.experience.map((e) => e.org).join(" ");
       ok(/INTEGRATE|MadAbility|Nixma/.test(employers), "Experience orgs incomplete");
-      // resume import sanity
       ok(typeof resumePdf === "string" && resumePdf.includes("Resume"), "Resume PDF import invalid");
-      // CountUp exists
-      ok(typeof CountUp === "function", "CountUp component not defined");
       console.log("[Portfolio: dev smoke tests] ✅ passed");
     } catch (e) {
       console.warn("[Portfolio: dev smoke tests] ⚠️", e);
     }
   }, [pulse]);
 
+  const navItems = [
+    { id: "work", label: "Work" },
+    { id: "what-i-do", label: "What I Do" },
+    { id: "projects", label: "Projects" },
+    { id: "publication", label: "Publication" },
+    { id: "education", label: "Education" },
+    { id: "skills", label: "Skills" },
+    { id: "about", label: "About" },
+    { id: "contact", label: "Contact" },
+  ];
+
   return (
     <MotionConfig transition={{ type: "spring", bounce: 0.2 }}>
-      <div className="min-h-screen bg-white text-neutral-900 scroll-smooth">
-        {showIntro && <IntroOverlay />}
+      <div className="min-h-screen bg-background font-sans text-foreground">
+        {showIntro && !reduceMotion && <IntroOverlay />}
+        <ScrollProgressGauge tone={activeTone} />
+        <BackgroundShapes active={active} tone={activeTone} />
 
-        {/* NAV */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-neutral-200">
-          <nav className="max-w-5xl mx-auto px-6 sm:px-8 py-4 flex items-center justify-between">
-            <a href="#home" className="font-semibold tracking-tight">
+        <header className="sticky top-0 z-30 border-b border-mist bg-paper/90 backdrop-blur">
+          <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
+            <NavLink href="#home" idKey="home" currentKey={active} pulse={pulse} onClick={scrollToSection("home")} variant="brand">
               ZX Ching
-            </a>
-            <div className="hidden sm:flex gap-6 text-sm" onMouseLeave={() => setHovered(null)}>
-              {["work", "projects", "publication", "education", "skills", "contact"].map((k) => (
-                <div key={k} onMouseEnter={() => setHovered(k)} onFocus={() => setHovered(k)} onBlur={() => setHovered(null)}>
-                  <NavLink href={`#${k}`} idKey={k} currentKey={currentKey} hoveredKey={hovered} pulse={pulse}>
-                    {k[0].toUpperCase() + k.slice(1)}
-                  </NavLink>
-                </div>
+            </NavLink>
+            <div className="hidden lg:flex gap-5 text-sm text-ink">
+              {navItems.map(({ id, label }) => (
+                <NavLink key={id} href={`#${id}`} idKey={id} currentKey={active} pulse={pulse} onClick={scrollToSection(id)}>
+                  {label}
+                </NavLink>
               ))}
             </div>
-            <motion.div whileHover={{ y: -1 }} layout>
-              <Button asChild size="sm" className="rounded-full bg-black text-white hover:bg-neutral-800">
-                <a href={resumePdf} target="_blank" rel="noreferrer">
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Resume
-                </a>
-              </Button>
-            </motion.div>
+            <Button asChild size="sm">
+              <a href={resumePdf} target="_blank" rel="noreferrer">
+                <FileDown className="h-4 w-4 mr-2" />
+                Resume
+              </a>
+            </Button>
           </nav>
-          <MarqueeStrip />
         </header>
 
-        {/* HERO */}
-        <Section id="home" title={" "}>
-          <motion.div ref={heroRef} style={{ y: heroY, opacity: heroOpacity }} layout>
-            <div className="grid md:grid-cols-[1fr,300px] gap-10 items-start">
-              <div>
-                <p className="uppercase tracking-widest text-[10px] text-neutral-500 mb-3">PORTFOLIO</p>
-                <h1 className="text-4xl sm:text-6xl font-semibold leading-[1.05]">
-                  I build <span className="underline underline-offset-4">fast</span>,
-                  <br className="hidden sm:block" /> kind systems.
-                </h1>
-                <p className="mt-4 text-lg sm:text-xl text-neutral-600 max-w-2xl">{PROFILE.tagline}</p>
+        <Section id="home" tone="ink" wash={{ x: "80%", y: "10%" }} labelledBy="home-heading">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-16 select-none font-display text-[9rem] font-extrabold leading-none text-paper/15 sm:text-[13rem]"
+            style={{ transform: "rotate(8deg)" }}
+          >
+            01
+          </div>
 
-                {/* counters */}
-                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-6">
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-semibold">
-                      <CountUp to={85} suffix="%" />
-                    </div>
-                    <div className="text-xs text-neutral-500">bias reduction (sims)</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-semibold">
-                      <CountUp to={40} suffix="%" />
-                    </div>
-                    <div className="text-xs text-neutral-500">legacy perf improvement</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-semibold">
-                      <CountUp to={25} suffix="%" />
-                    </div>
-                    <div className="text-xs text-neutral-500">throughput increase</div>
-                  </div>
-                </div>
+          <motion.div ref={heroRef} style={{ y: heroY, opacity: heroOpacity }} layout className="relative">
+            <div className="grid items-start gap-10 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] xl:grid-cols-[1.2fr_380px]">
+              <div>
+                <p className="uppercase tracking-widest text-[10px] font-display text-muted-foreground mb-3">PORTFOLIO</p>
+                <h1 id="home-heading" className="font-display text-3xl font-extrabold leading-[1.15] sm:text-4xl lg:text-5xl">
+                  Currently a coffee-craved software engineer in his 20s navigating one complex microservice
+                  architecture at a time.
+                </h1>
 
                 <div className="mt-7 flex flex-wrap gap-3">
-                  <motion.div whileHover={{ y: -1 }} layout>
-                    <Button asChild className="rounded-full bg-black text-white hover:bg-neutral-800">
+                  <motion.div layout>
+                    <Button asChild>
                       <a href={`mailto:${PROFILE.email}`}>
                         <Mail className="h-4 w-4 mr-2" />
                         Email
                       </a>
                     </Button>
                   </motion.div>
-                  <motion.div whileHover={{ y: -1 }} layout>
+                  <motion.div layout>
                     <Button
                       asChild
                       variant="outline"
-                      className="rounded-full border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white"
+                      className="border-foreground text-foreground hover:bg-foreground hover:text-background"
                     >
                       <a href={PROFILE.links.github} target="_blank" rel="noreferrer">
                         <Github className="h-4 w-4 mr-2" />
@@ -404,11 +413,11 @@ export default function App() {
                       </a>
                     </Button>
                   </motion.div>
-                  <motion.div whileHover={{ y: -1 }} layout>
+                  <motion.div layout>
                     <Button
                       asChild
                       variant="outline"
-                      className="rounded-full border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white"
+                      className="border-foreground text-foreground hover:bg-foreground hover:text-background"
                     >
                       <a href={PROFILE.links.linkedin} target="_blank" rel="noreferrer">
                         <Linkedin className="h-4 w-4 mr-2" />
@@ -416,29 +425,21 @@ export default function App() {
                       </a>
                     </Button>
                   </motion.div>
-                  <motion.div className="inline-flex items-center gap-2 text-sm text-neutral-700" layout>
-                    <Phone className="h-4 w-4" /> {PROFILE.phone}
-                  </motion.div>
                 </div>
 
-                <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-neutral-600">
-                  <span className="inline-flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    {PROFILE.location}
-                  </span>
-                  <span className="inline-flex items-center gap-2">•</span>
+                <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                   <span className="inline-flex items-center gap-2">{PROFILE.pronouns}</span>
                 </div>
               </div>
 
-              <motion.div layout>
-                <Card className="rounded-2xl border-neutral-200">
+              <div className="lg:-ml-6 lg:mt-10">
+                <Card>
                   <CardHeader>
                     <CardTitle className="text-base tracking-tight">Now</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="text-sm font-medium">{PROFILE.now.title}</div>
-                    <div className="text-xs text-neutral-500">{PROFILE.now.period}</div>
+                    <div className="text-xs text-muted-foreground">{PROFILE.now.period}</div>
                     <motion.ul
                       className="mt-2 space-y-2 text-sm list-disc pl-5"
                       variants={stagger}
@@ -453,24 +454,33 @@ export default function App() {
                       ))}
                     </motion.ul>
                   </CardContent>
-                  <CardFooter className="text-xs text-neutral-500">Open to full-time work & research opportunities.</CardFooter>
+                  <CardFooter className="text-xs text-muted-foreground">{PROFILE.now.footer}</CardFooter>
                 </Card>
-              </motion.div>
+              </div>
             </div>
           </motion.div>
         </Section>
 
-        {/* EXPERIENCE */}
-        <Section id="work" title="Experience">
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="grid gap-6">
+        <Section id="work" title="Experience" indent="left">
+          <VerticalLabel progress={workProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-ink/20 lg:block">
+            Experience
+          </VerticalLabel>
+          <motion.div
+            ref={workRef}
+            variants={stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.2 }}
+            className="grid gap-6"
+          >
             {PROFILE.experience.map((job, idx) => (
-              <motion.div key={idx} variants={item} whileHover={{ y: -3 }} transition={{ duration: 0.25, ease: EASE }} layout>
-                <Card className="group rounded-2xl border-neutral-200 overflow-hidden">
+              <motion.div key={idx} variants={item} layout>
+                <Card className="overflow-hidden">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1 text-lg">
                       <span>{job.role}</span>
-                      <span className="text-neutral-500">@ {job.org}</span>
-                      <span className="ml-auto text-sm text-neutral-500">{job.period}</span>
+                      <span className="text-muted-foreground">@ {job.org}</span>
+                      <span className="ml-auto text-sm text-muted-foreground">{job.period}</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -482,31 +492,60 @@ export default function App() {
                       ))}
                     </motion.ul>
                   </CardContent>
-                  <motion.div className="h-[2px] bg-neutral-900 origin-left" initial={{ scaleX: 0 }} whileHover={{ scaleX: 1 }} transition={{ duration: 0.35, ease: EASE }} />
                 </Card>
               </motion.div>
             ))}
           </motion.div>
         </Section>
 
-        {/* PROJECTS */}
+        <Section id="what-i-do" title="What I Do" tone="ink" wash={{ x: "15%", y: "15%" }}>
+          <VerticalLabel progress={doProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-paper/25 lg:block">
+            What I Do
+          </VerticalLabel>
+          <div ref={doRef} className="grid gap-6 sm:grid-cols-3">
+            {PROFILE.whatIDo.map((doItem, i) => (
+              <motion.div
+                key={doItem.title}
+                variants={item}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.2 }}
+              >
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="font-display text-2xl text-paper/40">{String(i + 1).padStart(2, "0")}</div>
+                    <CardTitle className="text-base">{doItem.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground">{doItem.desc}</CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </Section>
+
         <Section id="projects" title="Projects">
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="grid sm:grid-cols-2 gap-6">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.2 }}
+            className="grid gap-6 lg:ml-[18%] lg:max-w-[68%]"
+          >
             {PROFILE.projects.map((p, i) => (
-              <motion.div key={i} variants={item} whileHover={{ y: -3 }} transition={{ duration: 0.25, ease: EASE }} className="h-full flex flex-col" layout>
-                <Card className="group h-full flex flex-col rounded-2xl border-neutral-200 overflow-hidden relative">
+              <motion.div key={i} variants={item} layout>
+                <Card className="relative overflow-hidden">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">{p.title}</CardTitle>
                   </CardHeader>
-                  <CardContent className="grow">
-                    <p className="text-sm text-neutral-600">{p.blurb}</p>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{p.blurb}</p>
                     <motion.div className="mt-3 flex flex-wrap gap-2" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
                       {p.tech.map((t) => (
                         <Pill key={t}>{t}</Pill>
                       ))}
                     </motion.div>
                     {p.details && (
-                      <motion.ul className="mt-3 list-disc pl-5 text-sm text-neutral-700" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                      <motion.ul className="mt-3 list-disc pl-5 text-sm text-muted-foreground" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
                         {p.details.map((d, idx2) => (
                           <motion.li key={idx2} variants={item}>
                             {d}
@@ -515,92 +554,78 @@ export default function App() {
                       </motion.ul>
                     )}
                   </CardContent>
-                  <motion.div className="absolute bottom-0 left-0 right-0 h-[2px] bg-neutral-900 origin-left" initial={{ scaleX: 0 }} whileHover={{ scaleX: 1 }} transition={{ duration: 0.35, ease: EASE }} />
                 </Card>
               </motion.div>
             ))}
           </motion.div>
         </Section>
 
-        {/* PUBLICATION */}
-        <Section id="publication" title="Publication">
+        <Section id="publication" title="Publication" tone="ink" wash={{ x: "85%", y: "50%" }}>
           <Reveal>
-            <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2, ease: EASE }} layout>
-              <Card className="rounded-2xl border-neutral-200">
-                <CardContent className="py-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
-                    <BookOpen className="h-5 w-5 mb-3 sm:mb-0" />
-                    <div className="space-y-1">
-                      <div className="font-medium">{PROFILE.publication.title}</div>
-                      <div className="text-sm text-neutral-600">{PROFILE.publication.authors}</div>
-                      <div className="pt-1">
-                        <motion.a
-                          whileHover={{ y: -1 }}
-                          className="text-sm underline underline-offset-4 hover:opacity-70"
-                          href={PROFILE.publication.link}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Read the DOI
-                        </motion.a>
-                      </div>
+            <Card>
+              <CardContent className="py-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                  <BookOpen className="h-5 w-5 mb-3 sm:mb-0" />
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium sm:text-base">{PROFILE.publication.title}</div>
+                    <div className="text-sm text-muted-foreground">{PROFILE.publication.authors}</div>
+                    <div className="pt-1">
+                      <a className="text-sm underline underline-offset-4" href={PROFILE.publication.link} target="_blank" rel="noreferrer">
+                        Read the DOI
+                      </a>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+              </CardContent>
+            </Card>
           </Reveal>
         </Section>
 
-        {/* EDUCATION */}
-        <Section id="education" title="Education">
+        <Section id="education" title="Education" indent="right">
           <Reveal>
-            <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2, ease: EASE }} layout>
-              <Card className="rounded-2xl border-neutral-200">
-                <CardContent className="py-6">
+            <div style={{ transform: "rotate(-1.5deg)" }}>
+              <Card>
+                <CardContent className="py-6" style={{ transform: "rotate(1.5deg)" }}>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
                     <School className="h-5 w-5 mb-3 sm:mb-0" />
                     <div>
                       <div className="font-medium">
                         {PROFILE.education.school} — {PROFILE.education.degree}
                       </div>
-                      <div className="text-sm text-neutral-600">{PROFILE.education.period}</div>
+                      <div className="text-sm text-muted-foreground">{PROFILE.education.period}</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           </Reveal>
         </Section>
 
-        {/* SKILLS */}
-        <Section id="skills" title="Skills">
+        <Section id="skills" title="Skills" tone="ink" wash={{ x: "15%", y: "85%" }}>
           <div className="grid md:grid-cols-3 gap-6 items-start">
             <Reveal>
-              <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2, ease: EASE }} layout>
-                <Card className="md:col-span-2 rounded-2xl border-neutral-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Technical</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <motion.div className="flex flex-wrap gap-2" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                      {PROFILE.skills.map((s) => (
-                        <Pill key={s}>{s}</Pill>
-                      ))}
-                    </motion.div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg">Technical</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <motion.div className="flex flex-wrap gap-2" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                    {PROFILE.skills.map((s) => (
+                      <Pill key={s}>{s}</Pill>
+                    ))}
+                  </motion.div>
+                </CardContent>
+              </Card>
             </Reveal>
 
             <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid gap-4">
               {PROFILE.values.map((v) => (
-                <motion.div key={v.name} variants={item} whileHover={{ y: -2 }} transition={{ duration: 0.2, ease: EASE }} layout>
-                  <Card className="rounded-2xl border-neutral-200">
+                <motion.div key={v.name} variants={item} layout>
+                  <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base">{v.name}</CardTitle>
                     </CardHeader>
-                    <CardContent className="text-sm text-neutral-600">{v.desc}</CardContent>
+                    <CardContent className="text-sm text-muted-foreground">{v.desc}</CardContent>
                   </Card>
                 </motion.div>
               ))}
@@ -608,9 +633,47 @@ export default function App() {
           </div>
         </Section>
 
-        {/* FOOTER */}
-        <footer className="border-t border-neutral-200">
-          <div className="max-w-5xl mx-auto px-6 sm:px-8 py-8 text-xs text-neutral-500 flex flex-wrap items-center justify-between gap-3">
+        <Section id="about" title="About Me">
+          <div className="flex flex-col items-start gap-8 sm:flex-row sm:items-center">
+            <div className="shrink-0 border border-mist p-1" style={{ transform: "rotate(1.5deg)" }}>
+              <img src={aboutPhoto} alt={`${PROFILE.name} outdoors`} className="h-40 w-40 object-cover sm:h-48 sm:w-48" />
+            </div>
+            <p className="font-accent text-lg leading-relaxed sm:text-xl">{PROFILE.about}</p>
+          </div>
+        </Section>
+
+        <Section id="contact" tone="ink" wash={{ x: "85%", y: "90%" }} labelledBy="contact-heading">
+          <div className="relative">
+            <p className="mb-3 font-display text-[10px] uppercase tracking-widest text-muted-foreground">CONTACT</p>
+            <h2 id="contact-heading" className="max-w-xl font-display text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
+              Always open for the next pour.
+            </h2>
+            <p className="mt-4 max-w-md text-muted-foreground">{PROFILE.now.footer}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild className="bg-white text-black hover:bg-white/90">
+                <a href={`mailto:${PROFILE.email}`}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email
+                </a>
+              </Button>
+              <Button asChild variant="outline" className="border-foreground text-foreground hover:bg-foreground hover:text-background">
+                <a href={PROFILE.links.github} target="_blank" rel="noreferrer">
+                  <Github className="h-4 w-4 mr-2" />
+                  GitHub
+                </a>
+              </Button>
+              <Button asChild variant="outline" className="border-foreground text-foreground hover:bg-foreground hover:text-background">
+                <a href={PROFILE.links.linkedin} target="_blank" rel="noreferrer">
+                  <Linkedin className="h-4 w-4 mr-2" />
+                  LinkedIn
+                </a>
+              </Button>
+            </div>
+          </div>
+        </Section>
+
+        <footer className="border-t border-border">
+          <div className="max-w-5xl mx-auto px-6 sm:px-8 py-8 text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-3">
             <span>© {new Date().getFullYear()} ZX Ching</span>
             <span>Built with React · Tailwind · shadcn/ui</span>
           </div>
