@@ -7,6 +7,8 @@ import { DitherMark } from "@/components/dither-mark";
 import { ScrollProgressGauge } from "@/components/scroll-progress-gauge";
 import { BackgroundShapes } from "@/components/background-shapes";
 import { VerticalLabel } from "@/components/section-marks";
+import { PaperShowcase } from "@/components/paper-showcase";
+import { AlgorithmRace } from "@/components/algorithm-race";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
 import aboutPhoto from "@/assets/about-photo.png";
@@ -124,6 +126,8 @@ const PROFILE = {
     link: "https://doi.org/10.1145/3706599.3721194",
     authors:
       "Daniel Killough, Justin Feng, Rithvik Dyava, Zheng Xue ‘ZX’ Ching, Daniel Wang, Yapeng Tian, Yuhang Zhao",
+    summary:
+      "VRSight lets blind and low-vision users navigate VR by ear — it watches the headset's video feed in real time, detects interactable objects, signs, and avatars with a custom-trained model, and narrates them back as spatially-placed audio, all without the VR app itself needing to support accessibility.",
   },
   skills: [
     "Java",
@@ -524,61 +528,73 @@ export default function App() {
         </Section>
 
         <Section id="projects" title="Projects">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            className="grid gap-6 lg:ml-[18%] lg:max-w-[68%]"
-          >
-            {PROFILE.projects.map((p, i) => (
-              <motion.div key={i} variants={item} layout>
-                <Card className="relative overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">{p.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{p.blurb}</p>
-                    <motion.div className="mt-3 flex flex-wrap gap-2" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                      {p.tech.map((t) => (
-                        <Pill key={t}>{t}</Pill>
-                      ))}
-                    </motion.div>
-                    {p.details && (
-                      <motion.ul className="mt-3 list-disc pl-5 text-sm text-muted-foreground" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                        {p.details.map((d, idx2) => (
-                          <motion.li key={idx2} variants={item}>
-                            {d}
-                          </motion.li>
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:items-start">
+            <div className="lg:order-last">
+              <AlgorithmRace />
+              <p className="mt-3 text-sm text-muted-foreground">
+                A live maze-solver comparing three search algorithms, running in your browser.
+              </p>
+            </div>
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              className="grid gap-6"
+            >
+              {PROFILE.projects.map((p, i) => (
+                <motion.div key={i} variants={item} layout>
+                  <Card className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">{p.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{p.blurb}</p>
+                      <motion.div className="mt-3 flex flex-wrap gap-2" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                        {p.tech.map((t) => (
+                          <Pill key={t}>{t}</Pill>
                         ))}
-                      </motion.ul>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
+                      </motion.div>
+                      {p.details && (
+                        <motion.ul className="mt-3 list-disc pl-5 text-sm text-muted-foreground" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                          {p.details.map((d, idx2) => (
+                            <motion.li key={idx2} variants={item}>
+                              {d}
+                            </motion.li>
+                          ))}
+                        </motion.ul>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
         </Section>
 
         <Section id="publication" title="Publication" tone="ink" wash={{ x: "85%", y: "50%" }}>
-          <Reveal>
-            <Card>
-              <CardContent className="py-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
-                  <BookOpen className="h-5 w-5 mb-3 sm:mb-0" />
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium sm:text-base">{PROFILE.publication.title}</div>
-                    <div className="text-sm text-muted-foreground">{PROFILE.publication.authors}</div>
-                    <div className="pt-1">
-                      <a className="text-sm underline underline-offset-4" href={PROFILE.publication.link} target="_blank" rel="noreferrer">
-                        Read the DOI
-                      </a>
+          <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
+            <Reveal>
+              <Card>
+                <CardContent className="py-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                    <BookOpen className="h-5 w-5 mb-3 sm:mb-0" />
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium sm:text-base">{PROFILE.publication.title}</div>
+                      <div className="text-sm text-muted-foreground">{PROFILE.publication.authors}</div>
+                      <p className="pt-2 text-sm text-muted-foreground">{PROFILE.publication.summary}</p>
+                      <div className="pt-1">
+                        <a className="text-sm underline underline-offset-4" href={PROFILE.publication.link} target="_blank" rel="noreferrer">
+                          Read the DOI
+                        </a>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Reveal>
+                </CardContent>
+              </Card>
+            </Reveal>
+            <PaperShowcase />
+          </div>
         </Section>
 
         <Section id="education" title="Education" indent="right">
