@@ -5,7 +5,7 @@ const { cols, rows, cells } = ditherPattern;
 
 export function ScrollProgressGauge({ tone = "paper" }) {
   const { scrollYProgress } = useScroll();
-  const clipHeight = useTransform(scrollYProgress, [0, 1], [0, rows]);
+  const clipHeight = useTransform(scrollYProgress, [0, 1], [rows, 0]);
   const clipY = useTransform(clipHeight, (h) => rows - h);
 
   const dim = tone === "ink" ? "fill-ash/40" : "fill-graphite/30";

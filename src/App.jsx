@@ -685,15 +685,12 @@ export default function App() {
                 </a>
               </Button>
             </div>
+            <div className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground">
+              <span>© {new Date().getFullYear()} ZX Ching</span>
+              <span>Built with React · Tailwind · shadcn/ui</span>
+            </div>
           </div>
         </Section>
-
-        <footer className="border-t border-border">
-          <div className="max-w-5xl mx-auto px-6 sm:px-8 py-8 text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-3">
-            <span>© {new Date().getFullYear()} ZX Ching</span>
-            <span>Built with React · Tailwind · shadcn/ui</span>
-          </div>
-        </footer>
       </div>
       <Analytics />
     </MotionConfig>

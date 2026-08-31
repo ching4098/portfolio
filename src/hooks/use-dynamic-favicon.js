@@ -23,14 +23,11 @@ export function useDynamicFavicon() {
     const cellH = SIZE / rows;
 
     function draw(progress) {
-      ctx.fillStyle = "#0A0A0A";
-      ctx.fillRect(0, 0, SIZE, SIZE);
-      const fillLine = rows - progress * rows;
-      ctx.fillStyle = "#FAFAFA";
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      const fillLine = progress * rows;
       for (const cell of cells) {
-        if (cell.y >= fillLine) {
-          ctx.fillRect(cell.x * cellW, cell.y * cellH, Math.ceil(cellW), Math.ceil(cellH));
-        }
+        ctx.fillStyle = cell.y >= fillLine ? "#e0a05e" : "#4A4A4A";
+        ctx.fillRect(cell.x * cellW, cell.y * cellH, Math.ceil(cellW), Math.ceil(cellH));
       }
       const newLink = document.createElement("link");
       newLink.rel = "icon";
