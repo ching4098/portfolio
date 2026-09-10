@@ -3,6 +3,7 @@ import { Star, ArrowUpRight } from "lucide-react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Pill } from "@/components/pill";
 import { stagger, item } from "@/lib/motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import repos from "@/data/github-repos.json";
 
 function formatRepoName(name) {
@@ -10,12 +11,13 @@ function formatRepoName(name) {
 }
 
 export function GithubRepos() {
+  const reduceMotion = usePrefersReducedMotion();
   if (!repos.length) return null;
 
   return (
     <motion.div
       variants={stagger}
-      initial="hidden"
+      initial={reduceMotion ? false : "hidden"}
       whileInView="show"
       viewport={{ once: true, amount: 0.2 }}
       className="grid gap-4 sm:grid-cols-2"
@@ -28,6 +30,7 @@ export function GithubRepos() {
                 <a href={r.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:opacity-70">
                   {formatRepoName(r.name)}
                   <ArrowUpRight className="h-3.5 w-3.5" />
+                  <span className="sr-only"> (opens in new tab)</span>
                 </a>
               </CardTitle>
             </CardHeader>

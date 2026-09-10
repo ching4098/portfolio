@@ -81,7 +81,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: var(--ink);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: var(--mist);
+  --border: var(--ash);
   --input: var(--mist);
   --ring: var(--graphite);
   --chart-1: oklch(0.646 0.222 41.116);

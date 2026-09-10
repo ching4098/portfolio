@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import paperTitle from "@/assets/paper-title.png";
 import paperFig1 from "@/assets/paper-fig1.png";
 import paperFig3 from "@/assets/paper-fig3.png";
@@ -13,10 +14,11 @@ const PAGES = [
 ];
 
 export function PaperShowcase() {
+  const reduceMotion = usePrefersReducedMotion();
   return (
     <motion.div
       variants={cascade}
-      initial="hidden"
+      initial={reduceMotion ? false : "hidden"}
       whileInView="show"
       viewport={{ once: true, amount: 0.3 }}
       className="flex flex-wrap items-end"
@@ -27,7 +29,7 @@ export function PaperShowcase() {
           variants={cascadeItem}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           style={{ rotate: p.rotate }}
-          className={`${i > 0 ? "-ml-6" : ""} shrink-0 border border-mist bg-paper p-1`}
+          className={`${i > 0 ? "-ml-6" : ""} shrink-0 border border-border bg-paper p-1`}
         >
           <img src={p.src} alt={p.alt} className={`${p.w} object-cover`} />
         </motion.div>

@@ -126,7 +126,7 @@ export function AlgorithmRace() {
   const goal = cellPoint(maze.cols, pair.goal);
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} aria-hidden="true">
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full text-ink">
         <defs>
           {ALGOS.map((a) => (

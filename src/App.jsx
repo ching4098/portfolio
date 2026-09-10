@@ -18,16 +18,19 @@ import aboutPhoto from "@/assets/about-photo.png";
 import { Mail, Github, Linkedin, FileDown, School, BookOpen, Menu, X } from "lucide-react";
 import resumePdf from "../public/Resume.pdf";
 
-const Reveal = ({ delay = 0, y = 10, children }) => (
-  <motion.div
-    initial={{ opacity: 0, y }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, amount: 0.2, margin: "-5%" }}
-    transition={{ duration: 0.45, delay, ease: EASE }}
-  >
-    {children}
-  </motion.div>
-);
+const Reveal = ({ delay = 0, y = 10, children }) => {
+  const reduceMotion = usePrefersReducedMotion();
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2, margin: "-5%" }}
+      transition={{ duration: 0.45, delay, ease: EASE }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 function useSectionProgress() {
   const ref = useRef(null);
@@ -156,6 +159,7 @@ function IntroOverlay() {
       animate={{ y: "-100%" }}
       transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
       className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-white"
+      aria-hidden="true"
     >
       <DitherMark variant="intro" className="h-24 w-20 text-black sm:h-32 sm:w-28" />
       <motion.div
@@ -210,13 +214,14 @@ function NavLink({ href, idKey, children, currentKey, pulse, onClick, variant = 
   );
 }
 
-const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, children }) => {
+const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex, children }) => {
   const isInk = tone === "ink";
   const hasVisibleTitle = Boolean(title && title.trim());
   const headingId = hasVisibleTitle ? `${id}-heading` : labelledBy;
   return (
     <section
       id={id}
+      tabIndex={tabIndex}
       aria-labelledby={headingId}
       className={`relative grid min-h-screen w-full snap-start items-center overflow-hidden ${isInk ? "dark bg-ink" : ""}`}
       style={
@@ -231,9 +236,9 @@ const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, children
         }`}
       >
         {hasVisibleTitle && (
-          <p id={headingId} className="mb-6 font-display text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          <h2 id={headingId} className="mb-6 font-display text-[11px] font-normal uppercase tracking-[0.2em] text-muted-foreground">
             {title}
-          </p>
+          </h2>
         )}
         {children}
       </div>
@@ -359,13 +364,19 @@ export default function App() {
   ];
 
   return (
-    <MotionConfig transition={{ type: "spring", bounce: 0.2 }}>
+    <MotionConfig reducedMotion="user" transition={{ type: "spring", bounce: 0.2 }}>
       <div className="min-h-screen bg-background font-sans text-foreground">
+        <a
+          href="#home"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:text-paper"
+        >
+          Skip to content
+        </a>
         {showIntro && !reduceMotion && <IntroOverlay />}
         <ScrollProgressGauge tone={activeTone} />
         <BackgroundShapes active={active} tone={activeTone} />
 
-        <header className="sticky top-0 z-30 border-b border-mist bg-paper/90 backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-border bg-paper/90 backdrop-blur">
           <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
             <NavLink href="#home" idKey="home" currentKey={active} pulse={pulse} onClick={scrollToSection("home")} variant="brand">
               ZX Ching
@@ -382,6 +393,7 @@ export default function App() {
                 <a href={resumePdf} target="_blank" rel="noreferrer">
                   <FileDown className="h-4 w-4 mr-2" />
                   Resume
+                  <span className="sr-only"> (opens in new tab)</span>
                 </a>
               </Button>
               <button
@@ -395,36 +407,36 @@ export default function App() {
                 {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
+            <AnimatePresence>
+              {mobileNavOpen && (
+                <motion.div
+                  id="mobile-nav-panel"
+                  initial={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.2, ease: EASE }}
+                  className="absolute inset-x-0 top-full flex flex-col border-b border-border bg-paper text-sm text-ink lg:hidden"
+                >
+                  {navItems.map(({ id, label }) => (
+                    <a
+                      key={id}
+                      href={`#${id}`}
+                      onClick={(e) => {
+                        scrollToSection(id)(e);
+                        setMobileNavOpen(false);
+                      }}
+                      className={`border-t border-border px-6 py-3 first:border-t-0 sm:px-8 ${active === id ? "font-medium" : ""}`}
+                    >
+                      {label}
+                    </a>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </nav>
-          <AnimatePresence>
-            {mobileNavOpen && (
-              <motion.div
-                id="mobile-nav-panel"
-                initial={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
-                transition={{ duration: reduceMotion ? 0 : 0.2, ease: EASE }}
-                className="absolute inset-x-0 top-full flex flex-col border-b border-mist bg-paper text-sm text-ink lg:hidden"
-              >
-                {navItems.map(({ id, label }) => (
-                  <a
-                    key={id}
-                    href={`#${id}`}
-                    onClick={(e) => {
-                      scrollToSection(id)(e);
-                      setMobileNavOpen(false);
-                    }}
-                    className={`border-t border-mist px-6 py-3 first:border-t-0 sm:px-8 ${active === id ? "font-medium" : ""}`}
-                  >
-                    {label}
-                  </a>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
         </header>
 
-        <Section id="home" tone="ink" wash={{ x: "80%", y: "10%" }} labelledBy="home-heading">
+        <Section id="home" tone="ink" wash={{ x: "80%", y: "10%" }} labelledBy="home-heading" tabIndex={-1}>
           <div
             aria-hidden
             className="pointer-events-none absolute -right-10 -top-16 select-none font-display text-[9rem] font-extrabold leading-none text-paper/15 sm:text-[13rem]"
@@ -462,6 +474,7 @@ export default function App() {
                       <a href={PROFILE.links.github} target="_blank" rel="noreferrer">
                         <Github className="h-4 w-4 mr-2" />
                         GitHub
+                        <span className="sr-only"> (opens in new tab)</span>
                       </a>
                     </Button>
                   </motion.div>
@@ -474,6 +487,7 @@ export default function App() {
                       <a href={PROFILE.links.linkedin} target="_blank" rel="noreferrer">
                         <Linkedin className="h-4 w-4 mr-2" />
                         LinkedIn
+                        <span className="sr-only"> (opens in new tab)</span>
                       </a>
                     </Button>
                   </motion.div>
@@ -516,7 +530,7 @@ export default function App() {
           <motion.div
             ref={workRef}
             variants={stagger}
-            initial="hidden"
+            initial={reduceMotion ? false : "hidden"}
             whileInView="show"
             viewport={{ once: true, amount: 0.2 }}
             className="grid gap-6"
@@ -532,7 +546,7 @@ export default function App() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <motion.ul className="space-y-2 list-disc pl-5 text-sm" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                    <motion.ul className="space-y-2 list-disc pl-5 text-sm" variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }}>
                       {job.highlights.map((h, i) => (
                         <motion.li key={i} variants={item}>
                           {h}
@@ -555,7 +569,7 @@ export default function App() {
               <motion.div
                 key={doItem.title}
                 variants={item}
-                initial="hidden"
+                initial={reduceMotion ? false : "hidden"}
                 whileInView="show"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -580,7 +594,7 @@ export default function App() {
             </div>
             <motion.div
               variants={stagger}
-              initial="hidden"
+              initial={reduceMotion ? false : "hidden"}
               whileInView="show"
               viewport={{ once: true, amount: 0.2 }}
               className="grid gap-6"
@@ -593,13 +607,13 @@ export default function App() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">{p.blurb}</p>
-                      <motion.div className="mt-3 flex flex-wrap gap-2" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                      <motion.div className="mt-3 flex flex-wrap gap-2" variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }}>
                         {p.tech.map((t) => (
                           <Pill key={t}>{t}</Pill>
                         ))}
                       </motion.div>
                       {p.details && (
-                        <motion.ul className="mt-3 list-disc pl-5 text-sm text-muted-foreground" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                        <motion.ul className="mt-3 list-disc pl-5 text-sm text-muted-foreground" variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }}>
                           {p.details.map((d, idx2) => (
                             <motion.li key={idx2} variants={item}>
                               {d}
@@ -634,6 +648,7 @@ export default function App() {
                       <div className="pt-1">
                         <a className="text-sm underline underline-offset-4" href={PROFILE.publication.link} target="_blank" rel="noreferrer">
                           Read the DOI
+                          <span className="sr-only"> (opens in new tab)</span>
                         </a>
                       </div>
                     </div>
@@ -673,7 +688,7 @@ export default function App() {
                   <CardTitle className="text-lg">Technical</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <motion.div className="flex flex-wrap gap-2" variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                  <motion.div className="flex flex-wrap gap-2" variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }}>
                     {PROFILE.skills.map((s) => (
                       <Pill key={s}>{s}</Pill>
                     ))}
@@ -682,7 +697,7 @@ export default function App() {
               </Card>
             </Reveal>
 
-            <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid gap-4">
+            <motion.div variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }} className="grid gap-4">
               {PROFILE.values.map((v) => (
                 <motion.div key={v.name} variants={item} layout>
                   <Card>
@@ -699,7 +714,7 @@ export default function App() {
 
         <Section id="about" title="About Me">
           <div className="flex flex-col items-start gap-8 sm:flex-row sm:items-center">
-            <div className="shrink-0 border border-mist p-1" style={{ transform: "rotate(1.5deg)" }}>
+            <div className="shrink-0 border border-border p-1" style={{ transform: "rotate(1.5deg)" }}>
               <img src={aboutPhoto} alt={`${PROFILE.name} outdoors`} className="h-40 w-40 object-cover sm:h-48 sm:w-48" />
             </div>
             <div>
@@ -707,7 +722,7 @@ export default function App() {
               <motion.div
                 className="mt-4 flex flex-wrap gap-2"
                 variants={stagger}
-                initial="hidden"
+                initial={reduceMotion ? false : "hidden"}
                 whileInView="show"
                 viewport={{ once: true }}
               >
@@ -752,12 +767,14 @@ export default function App() {
                 <a href={PROFILE.links.github} target="_blank" rel="noreferrer">
                   <Github className="h-4 w-4 mr-2" />
                   GitHub
+                  <span className="sr-only"> (opens in new tab)</span>
                 </a>
               </Button>
               <Button asChild variant="outline" className="border-foreground text-foreground hover:bg-foreground hover:text-background">
                 <a href={PROFILE.links.linkedin} target="_blank" rel="noreferrer">
                   <Linkedin className="h-4 w-4 mr-2" />
                   LinkedIn
+                  <span className="sr-only"> (opens in new tab)</span>
                 </a>
               </Button>
             </div>
