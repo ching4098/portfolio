@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, MotionConfig, useScroll, useTransform, animate } from "framer-motion";
+import { motion, MotionConfig, AnimatePresence, useScroll, useTransform, animate } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { AlgorithmRace } from "@/components/algorithm-race";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
 import aboutPhoto from "@/assets/about-photo.png";
-import { Mail, Github, Linkedin, FileDown, School, BookOpen } from "lucide-react";
+import { Mail, Github, Linkedin, FileDown, School, BookOpen, Menu, X } from "lucide-react";
 import resumePdf from "../public/Resume.pdf";
 
 const EASE = [0.16, 1, 0.3, 1];
@@ -47,25 +47,24 @@ const PROFILE = {
   },
   now: {
     title: "Software Engineer · Ad & Affiliate Technology @ Rakuten",
-    period: "May 2026 – Present",
-    bullets: [
-      "Building backend services and microservice architecture for the Ad & Affiliate Technology platform.",
-    ],
+    period: "May 2026 - Present",
+    blurb: "Building backend services and microservice architecture for the Ad & Affiliate Technology platform.",
     footer: "Open to talk about more interesting research & work opportunities.",
   },
+  contactNote: "Reach out about research, open roles, or engineering work.",
   experience: [
     {
       role: "Undergraduate Research Assistant",
-      org: "MadAbility Lab @ UW–Madison",
-      period: "Oct 2024 – Apr 2026",
+      org: "MadAbility Lab @ UW-Madison",
+      period: "Oct 2024 - Apr 2026",
       highlights: [
         "Worked on research I can't officially share yet ;)",
       ],
     },
     {
       role: "Undergraduate Research Assistant",
-      org: "INTEGRATE @ UW–Madison",
-      period: "May 2025 – Nov 2025",
+      org: "INTEGRATE @ UW-Madison",
+      period: "May 2025 - Nov 2025",
       highlights: [
         "Designed pipelines to capture & process study data; saved ~6.5 hours of manual work.",
         "Wrote Python sims to run 12 study runs/user; validated pseudo-random task assignment.",
@@ -76,7 +75,7 @@ const PROFILE = {
     {
       role: "Software Engineer Intern",
       org: "Nixma Technologies",
-      period: "Jun 2024 – Aug 2024",
+      period: "Jun 2024 - Aug 2024",
       highlights: [
         "Improved legacy code performance by ~40% with refactors.",
         "Cut manual testing time by ~30% and increased accuracy ~20% via automation.",
@@ -88,7 +87,7 @@ const PROFILE = {
   whatIDo: [
     {
       title: "Backend & microservices",
-      desc: "Designing and shipping backend services and microservice architecture — currently doing this daily on Rakuten's Ad & Affiliate Technology platform.",
+      desc: "Designing and shipping backend services and microservice architecture. Currently doing this daily on Rakuten's Ad & Affiliate Technology platform.",
     },
     {
       title: "Automation & QA",
@@ -96,7 +95,7 @@ const PROFILE = {
     },
     {
       title: "Accessible, human-centered systems",
-      desc: "Research-backed care for the people actually using what I build — shaped by VR-accessibility work published at CHI 2025.",
+      desc: "Research-backed care for the people actually using what I build, shaped by VR-accessibility work published at CHI 2025.",
     },
   ],
   about:
@@ -115,9 +114,9 @@ const PROFILE = {
     },
   ],
   education: {
-    school: "University of Wisconsin–Madison",
+    school: "University of Wisconsin-Madison",
     degree: "B.S. in Computer Science",
-    period: "Sep 2023 – Dec 2025",
+    period: "Sep 2023 - Dec 2025",
     location: "Madison, WI",
   },
   publication: {
@@ -127,7 +126,7 @@ const PROFILE = {
     authors:
       "Daniel Killough, Justin Feng, Rithvik Dyava, Zheng Xue ‘ZX’ Ching, Daniel Wang, Yapeng Tian, Yuhang Zhao",
     summary:
-      "VRSight lets blind and low-vision users navigate VR by ear — it watches the headset's video feed in real time, detects interactable objects, signs, and avatars with a custom-trained model, and narrates them back as spatially-placed audio, all without the VR app itself needing to support accessibility.",
+      "VRSight lets blind and low-vision users navigate VR by ear. It watches the headset's video feed in real time, detects interactable objects, signs, and avatars with a custom-trained model, and narrates them back as spatially-placed audio, all without the VR app itself needing to support accessibility.",
   },
   skills: [
     "Java",
@@ -265,6 +264,7 @@ export default function App() {
   const [active, setActive] = useState("home");
   const [pulse, setPulse] = useState(0);
   const [showIntro, setShowIntro] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const activeTone = SECTION_TONES[active] ?? "paper";
 
   useEffect(() => {
@@ -369,13 +369,51 @@ export default function App() {
                 </NavLink>
               ))}
             </div>
-            <Button asChild size="sm">
-              <a href={resumePdf} target="_blank" rel="noreferrer">
-                <FileDown className="h-4 w-4 mr-2" />
-                Resume
-              </a>
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button asChild size="sm">
+                <a href={resumePdf} target="_blank" rel="noreferrer">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Resume
+                </a>
+              </Button>
+              <button
+                type="button"
+                className="-mr-1 flex h-9 w-9 items-center justify-center text-ink lg:hidden"
+                aria-label="Toggle navigation menu"
+                aria-expanded={mobileNavOpen}
+                aria-controls="mobile-nav-panel"
+                onClick={() => setMobileNavOpen((v) => !v)}
+              >
+                {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
           </nav>
+          <AnimatePresence>
+            {mobileNavOpen && (
+              <motion.div
+                id="mobile-nav-panel"
+                initial={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+                transition={{ duration: reduceMotion ? 0 : 0.2, ease: EASE }}
+                className="absolute inset-x-0 top-full flex flex-col border-b border-mist bg-paper text-sm text-ink lg:hidden"
+              >
+                {navItems.map(({ id, label }) => (
+                  <a
+                    key={id}
+                    href={`#${id}`}
+                    onClick={(e) => {
+                      scrollToSection(id)(e);
+                      setMobileNavOpen(false);
+                    }}
+                    className={`border-t border-mist px-6 py-3 first:border-t-0 sm:px-8 ${active === id ? "font-medium" : ""}`}
+                  >
+                    {label}
+                  </a>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </header>
 
         <Section id="home" tone="ink" wash={{ x: "80%", y: "10%" }} labelledBy="home-heading">
@@ -392,9 +430,11 @@ export default function App() {
               <div>
                 <p className="uppercase tracking-widest text-[10px] font-display text-muted-foreground mb-3">PORTFOLIO</p>
                 <h1 id="home-heading" className="font-display text-3xl font-extrabold leading-[1.15] sm:text-4xl lg:text-5xl">
-                  Currently a coffee-craved software engineer in his 20s navigating one complex microservice
-                  architecture at a time.
+                  Currently a coffee-craved software engineer.
                 </h1>
+                <p className="mt-4 max-w-lg text-base text-muted-foreground sm:text-lg">
+                  Navigating one complex microservice architecture at a time.
+                </p>
 
                 <div className="mt-7 flex flex-wrap gap-3">
                   <motion.div layout>
@@ -444,19 +484,15 @@ export default function App() {
                   <CardContent className="space-y-2">
                     <div className="text-sm font-medium">{PROFILE.now.title}</div>
                     <div className="text-xs text-muted-foreground">{PROFILE.now.period}</div>
-                    <motion.ul
-                      className="mt-2 space-y-2 text-sm list-disc pl-5"
-                      variants={stagger}
-                      initial="hidden"
-                      whileInView="show"
+                    <motion.p
+                      className="mt-2 text-sm"
+                      initial={{ opacity: 0, y: 6 }}
+                      whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
+                      transition={{ duration: 0.35, ease: EASE }}
                     >
-                      {PROFILE.now.bullets.map((b, i) => (
-                        <motion.li key={i} variants={item}>
-                          {b}
-                        </motion.li>
-                      ))}
-                    </motion.ul>
+                      {PROFILE.now.blurb}
+                    </motion.p>
                   </CardContent>
                   <CardFooter className="text-xs text-muted-foreground">{PROFILE.now.footer}</CardFooter>
                 </Card>
@@ -507,7 +543,7 @@ export default function App() {
             What I Do
           </VerticalLabel>
           <div ref={doRef} className="grid gap-6 sm:grid-cols-3">
-            {PROFILE.whatIDo.map((doItem, i) => (
+            {PROFILE.whatIDo.map((doItem) => (
               <motion.div
                 key={doItem.title}
                 variants={item}
@@ -517,7 +553,6 @@ export default function App() {
               >
                 <Card>
                   <CardHeader className="pb-2">
-                    <div className="font-display text-2xl text-paper/40">{String(i + 1).padStart(2, "0")}</div>
                     <CardTitle className="text-base">{doItem.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm text-muted-foreground">{doItem.desc}</CardContent>
@@ -606,7 +641,7 @@ export default function App() {
                     <School className="h-5 w-5 mb-3 sm:mb-0" />
                     <div>
                       <div className="font-medium">
-                        {PROFILE.education.school} — {PROFILE.education.degree}
+                        {PROFILE.education.school}, {PROFILE.education.degree}
                       </div>
                       <div className="text-sm text-muted-foreground">{PROFILE.education.period}</div>
                     </div>
@@ -654,7 +689,7 @@ export default function App() {
             <div className="shrink-0 border border-mist p-1" style={{ transform: "rotate(1.5deg)" }}>
               <img src={aboutPhoto} alt={`${PROFILE.name} outdoors`} className="h-40 w-40 object-cover sm:h-48 sm:w-48" />
             </div>
-            <p className="font-accent text-lg leading-relaxed sm:text-xl">{PROFILE.about}</p>
+            <p className="text-lg leading-relaxed sm:text-xl">{PROFILE.about}</p>
           </div>
         </Section>
 
@@ -664,7 +699,7 @@ export default function App() {
             <h2 id="contact-heading" className="max-w-xl font-display text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
               Always open for the next pour.
             </h2>
-            <p className="mt-4 max-w-md text-muted-foreground">{PROFILE.now.footer}</p>
+            <p className="mt-4 max-w-md text-muted-foreground">{PROFILE.contactNote}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild className="bg-white text-black hover:bg-white/90">
                 <a href={`mailto:${PROFILE.email}`}>

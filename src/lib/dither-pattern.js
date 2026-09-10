@@ -1,7 +1,7 @@
 const COLS = 26;
 const ROWS = 34;
 
-const BAYER_4X4 = [
+export const BAYER_4X4 = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
   [3, 11, 1, 9],
