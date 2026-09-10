@@ -40,7 +40,7 @@ function RingShape({ className, w }) {
   );
 }
 
-function SteamShape({ className, w }) {
+export function SteamShape({ className, w }) {
   const size = 52 + w * 24;
   return (
     <svg viewBox="0 0 60 90" className={className} style={{ width: size * 0.62, height: size }}>

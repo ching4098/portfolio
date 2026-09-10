@@ -5,17 +5,18 @@ import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { DitherMark } from "@/components/dither-mark";
 import { ScrollProgressGauge } from "@/components/scroll-progress-gauge";
-import { BackgroundShapes } from "@/components/background-shapes";
+import { BackgroundShapes, SteamShape } from "@/components/background-shapes";
 import { VerticalLabel } from "@/components/section-marks";
 import { PaperShowcase } from "@/components/paper-showcase";
 import { AlgorithmRace } from "@/components/algorithm-race";
+import { GithubRepos } from "@/components/github-repos";
+import { Pill } from "@/components/pill";
+import { EASE, stagger, item } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
 import aboutPhoto from "@/assets/about-photo.png";
 import { Mail, Github, Linkedin, FileDown, School, BookOpen, Menu, X } from "lucide-react";
 import resumePdf from "../public/Resume.pdf";
-
-const EASE = [0.16, 1, 0.3, 1];
 
 const Reveal = ({ delay = 0, y = 10, children }) => (
   <motion.div
@@ -27,9 +28,6 @@ const Reveal = ({ delay = 0, y = 10, children }) => (
     {children}
   </motion.div>
 );
-
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.02 } } };
-const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } } };
 
 function useSectionProgress() {
   const ref = useRef(null);
@@ -99,7 +97,10 @@ const PROFILE = {
     },
   ],
   about:
-    "When I'm not knee-deep in a microservice call graph, I'm probably overthinking a pour-over ratio. I got into specialty coffee around the same time I got into distributed systems, and I still can't tell if I'm optimizing for uptime or for extraction time. Professionally curious, unprofessionally caffeinated.",
+    "When I'm not knee-deep in a microservice call graph, I'm probably hunting for a new coffee shop worth the detour. I got into specialty coffee around the same time I got into distributed systems, and I still can't tell if I'm optimizing for uptime or for the perfect cafe. Professionally curious, unprofessionally caffeinated.",
+  coffeeOrders: ["Latte", "Cappuccino", "Flat White"],
+  coffeeNote:
+    "Terrible at latte art, but great at finding a cafe with the right vibe. I'll happily go the extra mile for one that gets it exactly right.",
   projects: [
     {
       title: "Prim’s & Dijkstra’s Visualizer",
@@ -147,12 +148,6 @@ const PROFILE = {
     { name: "Curiosity", desc: "Learn in public; iterate quickly." },
   ],
 };
-
-const Pill = ({ children }) => (
-  <motion.span className="rounded-full border border-border px-2 py-0.5 text-xs tracking-wide" variants={item} layout>
-    {children}
-  </motion.span>
-);
 
 function IntroOverlay() {
   return (
@@ -319,6 +314,19 @@ export default function App() {
 
   const [workRef, workProgress] = useSectionProgress();
   const [doRef, doProgress] = useSectionProgress();
+
+  const { scrollYProgress: pageProgress } = useScroll();
+  const [showFlourish, setShowFlourish] = useState(false);
+  const flourishFired = useRef(false);
+  useEffect(() => {
+    const unsub = pageProgress.on("change", (p) => {
+      if (p >= 0.98 && !flourishFired.current) {
+        flourishFired.current = true;
+        setShowFlourish(true);
+      }
+    });
+    return unsub;
+  }, [pageProgress]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -605,6 +613,11 @@ export default function App() {
               ))}
             </motion.div>
           </div>
+
+          <div className="mt-12">
+            <p className="mb-4 text-sm text-muted-foreground">More on GitHub</p>
+            <GithubRepos />
+          </div>
         </Section>
 
         <Section id="publication" title="Publication" tone="ink" wash={{ x: "85%", y: "50%" }}>
@@ -689,12 +702,40 @@ export default function App() {
             <div className="shrink-0 border border-mist p-1" style={{ transform: "rotate(1.5deg)" }}>
               <img src={aboutPhoto} alt={`${PROFILE.name} outdoors`} className="h-40 w-40 object-cover sm:h-48 sm:w-48" />
             </div>
-            <p className="text-lg leading-relaxed sm:text-xl">{PROFILE.about}</p>
+            <div>
+              <p className="text-lg leading-relaxed sm:text-xl">{PROFILE.about}</p>
+              <motion.div
+                className="mt-4 flex flex-wrap gap-2"
+                variants={stagger}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+              >
+                {PROFILE.coffeeOrders.map((o) => (
+                  <Pill key={o}>{o}</Pill>
+                ))}
+              </motion.div>
+              <p className="mt-3 text-sm text-muted-foreground">{PROFILE.coffeeNote}</p>
+            </div>
           </div>
         </Section>
 
         <Section id="contact" tone="ink" wash={{ x: "85%", y: "90%" }} labelledBy="contact-heading">
           <div className="relative">
+            <AnimatePresence>
+              {showFlourish && !reduceMotion && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: -22 }}
+                  transition={{ duration: 1.8, times: [0, 0.2, 0.7, 1], ease: EASE }}
+                  onAnimationComplete={() => setShowFlourish(false)}
+                  className="pointer-events-none absolute -top-10 left-0 text-paper/60"
+                  aria-hidden="true"
+                >
+                  <SteamShape w={0.6} />
+                </motion.div>
+              )}
+            </AnimatePresence>
             <p className="mb-3 font-display text-[10px] uppercase tracking-widest text-muted-foreground">CONTACT</p>
             <h2 id="contact-heading" className="max-w-xl font-display text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
               Always open for the next pour.

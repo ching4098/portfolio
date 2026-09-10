@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/fetch-github-repos.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/fetch-github-repos.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
