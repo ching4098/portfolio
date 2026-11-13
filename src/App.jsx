@@ -55,6 +55,19 @@ const PROFILE = {
   contactNote: "Reach out about research, open roles, or engineering work.",
   experience: [
     {
+      role: "Software Engineer",
+      org: "Rakuten Group · Rakuten Affiliate, LinkShare & TrafficGate",
+      period: "May 2026 - Present",
+      highlights: [
+        "Cut product link load time by 95% and handled 20x more requests for advertisers with 47K+ links, by optimizing database queries, caching and pagination in Java and Spring Boot.",
+        "Reduced data delay between legacy and cloud platforms by 83%, from hourly to every 10 minutes, by rebuilding the data sync as an automated, fault-tolerant pipeline on Google Cloud.",
+        "Launched a new multi-tenant notification service for advertisers and affiliates in English and Japanese, raising test coverage by 30%, by building its core REST APIs in Java and Spring Boot.",
+        "Recovered every new-advertiser onboarding event that the GCP Pub/Sub consumer was acknowledging and then dropping, by replaying events against logs and fixing handler registration, payload typing and tenant lookup.",
+        "Prepared 750K legacy product links for migration to the new platform with under 0.01% needing manual review, by writing data-quality checks and fallback rules into the BigQuery migration jobs.",
+        "Shortened the service's PR merge time by 73% by building a Claude Code workflow where parallel agents plan, investigate and verify fixes, using a 3.6K-node codebase knowledge graph the team updates in every PR.",
+      ],
+    },
+    {
       role: "Undergraduate Research Assistant",
       org: "MadAbility Lab @ UW-Madison",
       period: "Oct 2024 - Apr 2026",
@@ -67,10 +80,9 @@ const PROFILE = {
       org: "INTEGRATE @ UW-Madison",
       period: "May 2025 - Nov 2025",
       highlights: [
-        "Designed pipelines to capture & process study data; saved ~6.5 hours of manual work.",
-        "Wrote Python sims to run 12 study runs/user; validated pseudo-random task assignment.",
-        "Reduced selection bias by ≥85%; co-designed study scope & interactions.",
-        "Defined VR interaction flows; pilot runs saw ~20% fewer usability issues.",
+        "Saved 6.5 hours of manual work every week by building automated Python ETL data pipelines.",
+        "Curbed selection bias in a VR user study by 85% by creating a simulation tool that randomized task order.",
+        "Removed 20% of usability issues in pilot testing by designing study protocols and backend flows for VR systems.",
       ],
     },
     {
@@ -78,10 +90,10 @@ const PROFILE = {
       org: "Nixma Technologies",
       period: "Jun 2024 - Aug 2024",
       highlights: [
-        "Improved legacy code performance by ~40% with refactors.",
-        "Cut manual testing time by ~30% and increased accuracy ~20% via automation.",
-        "Added multithreading: throughput ↑ ~25%, reliability ↑ ~15%.",
-        "Built HMIs with multi-user access control; reduced operator faults ~20%.",
+        "Improved response time by 40% under 2K requests per second by refactoring core C# data-processing modules.",
+        "Lowered manual QA time by 30% and raised test accuracy by 20% by automating testing pipelines with Jenkins.",
+        "Accelerated backend processing by 25% by converting blocking tasks into multithreaded jobs.",
+        "Decreased configuration errors by 20% by adding role-based access control to industrial control software.",
       ],
     },
   ],
@@ -105,6 +117,16 @@ const PROFILE = {
   coffeeNote:
     "Terrible at latte art, but great at finding a cafe with the right vibe. I'll happily go the extra mile for one that gets it exactly right.",
   projects: [
+    {
+      title: "Fraud Detection System · Capital One Capstone",
+      tech: ["Python", "AWS Lambda", "DynamoDB", "GitHub Actions"],
+      blurb: "Serverless pipeline that scores high-risk transactions in under 200ms.",
+      details: [
+        "Boosted fraud detection rate by 22% by developing 10+ anomaly detection features with the team.",
+        "Dropped deployment errors by 30% by setting up automated CI/CD pipelines in GitHub Actions.",
+        "Grew data throughput by 30% by adding asynchronous processing and tuning database access patterns.",
+      ],
+    },
     {
       title: "Prim’s & Dijkstra’s Visualizer",
       tech: ["Java", "JUnit", "JavaFX"],
@@ -134,16 +156,29 @@ const PROFILE = {
   },
   skills: [
     "Java",
+    "Python",
+    "SQL",
     "C#",
     "C/C++",
-    "SQL",
-    "MySQL",
-    "Python",
+    "PHP",
     "JavaScript",
-    "HTML/CSS",
-    "Software QA & Testing",
-    "Automation",
-    "Data Handling & Processing",
+    "Spring Boot",
+    "Spring Batch",
+    "JPA/Hibernate",
+    "gRPC",
+    "PostgreSQL",
+    "Liquibase",
+    "AWS Lambda",
+    "DynamoDB",
+    "GCP BigQuery",
+    "Pub/Sub",
+    "Cloud Run",
+    "Airflow",
+    "Docker",
+    "Kubernetes",
+    "Claude Code",
+    "Parallel agent workflows",
+    "Code knowledge graphs",
   ],
   values: [
     { name: "Craft", desc: "Readable, tested code ships faster." },
@@ -344,7 +379,7 @@ export default function App() {
       ok(Array.isArray(PROFILE.projects) && PROFILE.projects.length >= 1, "Projects array empty");
       ok(PROFILE.education && PROFILE.education.school.includes("Wisconsin"), "Education not populated");
       const employers = PROFILE.experience.map((e) => e.org).join(" ");
-      ok(/INTEGRATE|MadAbility|Nixma/.test(employers), "Experience orgs incomplete");
+      ok(/Rakuten/.test(employers) && /INTEGRATE|MadAbility|Nixma/.test(employers), "Experience orgs incomplete");
       ok(typeof resumePdf === "string" && resumePdf.includes("Resume"), "Resume PDF import invalid");
       console.log("[Portfolio: dev smoke tests] ✅ passed");
     } catch (e) {
