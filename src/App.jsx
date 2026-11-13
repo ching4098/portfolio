@@ -47,68 +47,53 @@ const PROFILE = {
     linkedin: "https://linkedin.com/in/zxching",
   },
   now: {
-    title: "Software Engineer · Ad & Affiliate Technology @ Rakuten",
+    title: "Software Engineer @ Rakuten",
     period: "May 2026 - Present",
-    blurb: "Building backend services and microservice architecture for the Ad & Affiliate Technology platform.",
+    blurb: "Rebuilding the platform behind Rakuten's affiliate business, one slow query and one missing event at a time.",
     footer: "Open to talk about more interesting research & work opportunities.",
   },
   contactNote: "Reach out about research, open roles, or engineering work.",
   experience: [
     {
       role: "Software Engineer",
-      org: "Rakuten Group · Rakuten Affiliate, LinkShare & TrafficGate",
+      org: "Rakuten",
       period: "May 2026 - Present",
-      highlights: [
-        "Cut product link load time by 95% and handled 20x more requests for advertisers with 47K+ links, by optimizing database queries, caching and pagination in Java and Spring Boot.",
-        "Reduced data delay between legacy and cloud platforms by 83%, from hourly to every 10 minutes, by rebuilding the data sync as an automated, fault-tolerant pipeline on Google Cloud.",
-        "Launched a new multi-tenant notification service for advertisers and affiliates in English and Japanese, raising test coverage by 30%, by building its core REST APIs in Java and Spring Boot.",
-        "Recovered every new-advertiser onboarding event that the GCP Pub/Sub consumer was acknowledging and then dropping, by replaying events against logs and fixing handler registration, payload typing and tenant lookup.",
-        "Prepared 750K legacy product links for migration to the new platform with under 0.01% needing manual review, by writing data-quality checks and fallback rules into the BigQuery migration jobs.",
-        "Shortened the service's PR merge time by 73% by building a Claude Code workflow where parallel agents plan, investigate and verify fixes, using a 3.6K-node codebase knowledge graph the team updates in every PR.",
-      ],
+      summary:
+        "Helping merge three affiliate platforms, Rakuten Affiliate, LinkShare and TrafficGate, into one. I love the unglamorous parts: making a 6-second page load in 0.3, and finding where events go when nobody's watching. I also run a small crew of Claude Code agents that debug alongside me.",
     },
     {
       role: "Undergraduate Research Assistant",
       org: "MadAbility Lab @ UW-Madison",
       period: "Oct 2024 - Apr 2026",
-      highlights: [
-        "Worked on research I can't officially share yet ;)",
-      ],
+      summary:
+        "Worked on VRSight, an AI system that describes VR worlds out loud so blind users can explore them. I built the data and backend side: model training data, faster queries, real-time speech through Azure. We demoed it at CHI 2025.",
     },
     {
       role: "Undergraduate Research Assistant",
       org: "INTEGRATE @ UW-Madison",
       period: "May 2025 - Nov 2025",
-      highlights: [
-        "Saved 6.5 hours of manual work every week by building automated Python ETL data pipelines.",
-        "Curbed selection bias in a VR user study by 85% by creating a simulation tool that randomized task order.",
-        "Removed 20% of usability issues in pilot testing by designing study protocols and backend flows for VR systems.",
-      ],
+      summary:
+        "Built the plumbing for a VR user study. Pipelines turned messy logs into clean data, and a simulator kept every participant's task order fair.",
     },
     {
       role: "Software Engineer Intern",
       org: "Nixma Technologies",
       period: "Jun 2024 - Aug 2024",
-      highlights: [
-        "Improved response time by 40% under 2K requests per second by refactoring core C# data-processing modules.",
-        "Lowered manual QA time by 30% and raised test accuracy by 20% by automating testing pipelines with Jenkins.",
-        "Accelerated backend processing by 25% by converting blocking tasks into multithreaded jobs.",
-        "Decreased configuration errors by 20% by adding role-based access control to industrial control software.",
-      ],
+      summary: "My first taste of production. Made industrial automation software faster, safer and properly tested.",
     },
   ],
   whatIDo: [
     {
-      title: "Backend & microservices",
-      desc: "Designing and shipping backend services and microservice architecture. Currently doing this daily on Rakuten's Ad & Affiliate Technology platform.",
+      title: "Backend that holds up",
+      desc: "Services and pipelines that stay fast when the data gets big.",
     },
     {
-      title: "Automation & QA",
-      desc: "Cutting out repetitive manual work with automation and real test coverage, because tested code ships faster and breaks less often.",
+      title: "Building with AI agents",
+      desc: "I treat Claude Code like a team and spend my time on the hard calls.",
     },
     {
-      title: "Accessible, human-centered systems",
-      desc: "Research-backed care for the people actually using what I build, shaped by VR-accessibility work published at CHI 2025.",
+      title: "Accessible by default",
+      desc: "VRSight taught me to build for people who aren't the typical user.",
     },
   ],
   about:
@@ -118,25 +103,21 @@ const PROFILE = {
     "Terrible at latte art, but great at finding a cafe with the right vibe. I'll happily go the extra mile for one that gets it exactly right.",
   projects: [
     {
-      title: "Fraud Detection System · Capital One Capstone",
-      tech: ["Python", "AWS Lambda", "DynamoDB", "GitHub Actions"],
-      blurb: "Serverless pipeline that scores high-risk transactions in under 200ms.",
-      details: [
-        "Boosted fraud detection rate by 22% by developing 10+ anomaly detection features with the team.",
-        "Dropped deployment errors by 30% by setting up automated CI/CD pipelines in GitHub Actions.",
-        "Grew data throughput by 30% by adding asynchronous processing and tuning database access patterns.",
-      ],
+      title: "adperf",
+      status: "In progress",
+      tech: ["Python", "DuckDB"],
+      blurb:
+        "For anyone who's ever reconciled two ad dashboards by hand and lost an afternoon. Python, DuckDB and millions of rows of public ad data. More soon.",
+    },
+    {
+      title: "Fraud Detection · Capital One Capstone",
+      tech: ["Python", "AWS Lambda", "DynamoDB"],
+      blurb: "Serverless pipeline that flags risky transactions in under 200ms.",
     },
     {
       title: "Prim’s & Dijkstra’s Visualizer",
-      tech: ["Java", "JUnit", "JavaFX"],
-      blurb: "MST & shortest-path visualizer with adjacency lists and min-heap priority queues.",
-      details: [
-        "Time complexity optimized to O(E log V) using min-heap PQs.",
-        "Lazy deletion + data-structure reuse reduce overhead.",
-        "GUI to input graphs and watch step-by-step execution.",
-        "Demonstrated with real-world datasets (routing, shortest-path).",
-      ],
+      tech: ["Java", "JavaFX"],
+      blurb: "Watch MST and shortest-path algorithms work through a graph, step by step.",
     },
   ],
   education: {
@@ -156,29 +137,17 @@ const PROFILE = {
   },
   skills: [
     "Java",
+    "Spring Boot",
     "Python",
     "SQL",
-    "C#",
-    "C/C++",
-    "PHP",
-    "JavaScript",
-    "Spring Boot",
-    "Spring Batch",
-    "JPA/Hibernate",
-    "gRPC",
     "PostgreSQL",
-    "Liquibase",
-    "AWS Lambda",
-    "DynamoDB",
-    "GCP BigQuery",
-    "Pub/Sub",
-    "Cloud Run",
-    "Airflow",
+    "GCP",
+    "AWS",
     "Docker",
     "Kubernetes",
     "Claude Code",
-    "Parallel agent workflows",
-    "Code knowledge graphs",
+    "C#",
+    "React",
   ],
   values: [
     { name: "Craft", desc: "Readable, tested code ships faster." },
@@ -249,7 +218,7 @@ function NavLink({ href, idKey, children, currentKey, pulse, onClick, variant = 
   );
 }
 
-const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex, children }) => {
+const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex, compact, children }) => {
   const isInk = tone === "ink";
   const hasVisibleTitle = Boolean(title && title.trim());
   const headingId = hasVisibleTitle ? `${id}-heading` : labelledBy;
@@ -266,7 +235,7 @@ const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex
       }
     >
       <div
-        className={`relative z-20 mx-auto max-w-5xl px-6 py-20 text-foreground sm:px-8 lg:max-w-6xl lg:py-32 xl:max-w-7xl xl:py-40 ${
+        className={`relative z-20 mx-auto max-w-5xl px-6 py-20 text-foreground sm:px-8 lg:max-w-6xl xl:max-w-7xl ${compact ? "lg:py-14" : "lg:py-32 xl:py-40"} ${
           indent === "left" ? "lg:pr-16 xl:pr-28" : indent === "right" ? "lg:pl-16 xl:pl-28" : ""
         }`}
       >
@@ -558,7 +527,7 @@ export default function App() {
           </motion.div>
         </Section>
 
-        <Section id="work" title="Experience" indent="left">
+        <Section id="work" title="Experience" indent="left" compact>
           <VerticalLabel progress={workProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-ink/20 lg:block">
             Experience
           </VerticalLabel>
@@ -581,13 +550,7 @@ export default function App() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <motion.ul className="space-y-2 list-disc pl-5 text-sm" variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }}>
-                      {job.highlights.map((h, i) => (
-                        <motion.li key={i} variants={item}>
-                          {h}
-                        </motion.li>
-                      ))}
-                    </motion.ul>
+<p className="text-sm leading-relaxed">{job.summary}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -619,7 +582,7 @@ export default function App() {
           </div>
         </Section>
 
-        <Section id="projects" title="Projects">
+        <Section id="projects" title="Projects" compact>
           <div className="grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:items-start">
             <div className="lg:order-last">
               <AlgorithmRace />
@@ -632,13 +595,16 @@ export default function App() {
               initial={reduceMotion ? false : "hidden"}
               whileInView="show"
               viewport={{ once: true, amount: 0.2 }}
-              className="grid gap-6"
+              className="grid gap-4"
             >
               {PROFILE.projects.map((p, i) => (
                 <motion.div key={i} variants={item} layout>
                   <Card className="relative overflow-hidden">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">{p.title}</CardTitle>
+                      <CardTitle className="text-lg flex flex-wrap items-center gap-2">
+                        {p.title}
+                        {p.status && <span className="border border-border px-2 py-0.5 font-display text-[10px] font-normal uppercase tracking-widest text-muted-foreground">{p.status}</span>}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">{p.blurb}</p>
@@ -663,8 +629,8 @@ export default function App() {
             </motion.div>
           </div>
 
-          <div className="mt-12">
-            <p className="mb-4 text-sm text-muted-foreground">More on GitHub</p>
+          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p className="text-sm text-muted-foreground">More on GitHub</p>
             <GithubRepos />
           </div>
         </Section>

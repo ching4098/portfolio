@@ -1,9 +1,4 @@
-import { motion } from "framer-motion";
-import { Star, ArrowUpRight } from "lucide-react";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Pill } from "@/components/pill";
-import { stagger, item } from "@/lib/motion";
-import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { ArrowUpRight } from "lucide-react";
 import repos from "@/data/github-repos.json";
 
 function formatRepoName(name) {
@@ -11,44 +6,25 @@ function formatRepoName(name) {
 }
 
 export function GithubRepos() {
-  const reduceMotion = usePrefersReducedMotion();
   if (!repos.length) return null;
 
   return (
-    <motion.div
-      variants={stagger}
-      initial={reduceMotion ? false : "hidden"}
-      whileInView="show"
-      viewport={{ once: true, amount: 0.2 }}
-      className="grid gap-4 sm:grid-cols-2"
-    >
+    <ul className="flex flex-wrap gap-2">
       {repos.map((r) => (
-        <motion.div key={r.name} variants={item} layout>
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">
-                <a href={r.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:opacity-70">
-                  {formatRepoName(r.name)}
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                  <span className="sr-only"> (opens in new tab)</span>
-                </a>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {r.description && <p className="text-sm text-muted-foreground">{r.description}</p>}
-              <div className="flex flex-wrap items-center gap-2">
-                {r.language && <Pill>{r.language}</Pill>}
-                {r.stars > 0 && (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Star className="h-3 w-3" />
-                    {r.stars}
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <li key={r.name}>
+          <a
+            href={r.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 border border-border px-3 py-1 text-sm hover:opacity-70"
+          >
+            {formatRepoName(r.name)}
+            {r.language && <span className="text-xs text-muted-foreground">· {r.language}</span>}
+            <ArrowUpRight className="h-3.5 w-3.5" />
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+        </li>
       ))}
-    </motion.div>
+    </ul>
   );
 }

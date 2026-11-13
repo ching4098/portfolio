@@ -19,7 +19,7 @@ async function main() {
 
   const repos = await res.json();
   const filtered = repos
-    .filter((r) => !r.fork && r.name.toLowerCase() !== "portfolio")
+    .filter((r) => !r.fork && !["portfolio", "odyssey"].includes(r.name.toLowerCase()))
     .slice(0, 5)
     .map((r) => ({
       name: r.name,
