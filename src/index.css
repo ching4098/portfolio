@@ -55,6 +55,8 @@
   --font-display: "Jost", ui-sans-serif, system-ui, sans-serif;
   --font-accent: "Libre Caslon Display", ui-serif, Georgia, serif;
   --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+  --font-hand: "Caveat", "Comic Sans MS", cursive;
 }
 
 :root {
@@ -65,6 +67,9 @@
   --ash: oklch(0.633 0 0);
   --mist: oklch(0.87 0 0);
   --paper: oklch(0.985 0 0);
+  --crema: #b07a4c;
+  --crema-dark: #3a1b12;
+  --milk: #efe3d3;
 
   --background: var(--paper);
   --foreground: var(--ink);
@@ -151,4 +156,17 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* The Brew: uneven paper and torn edges */
+.torn-bottom {
+  clip-path: polygon(0 0, 100% 0, 100% 94%, 93% 98%, 86% 95%, 77% 99%, 68% 94%, 59% 98%, 49% 95%, 40% 100%, 31% 95%, 22% 99%, 12% 94%, 5% 98%, 0 95%);
+}
+.torn-right {
+  clip-path: polygon(0 0, 97% 0, 100% 9%, 96% 21%, 99% 34%, 95% 47%, 100% 61%, 96% 74%, 99% 87%, 96% 100%, 0 100%);
+}
+.wonky-underline {
+  text-decoration: underline wavy var(--crema);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 8px;
 }

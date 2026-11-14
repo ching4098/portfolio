@@ -17,6 +17,18 @@ import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
 import aboutPhoto from "@/assets/about-photo.png";
 import { Mail, Github, Linkedin, FileDown, School, BookOpen, Menu, X } from "lucide-react";
 import resumePdf from "../public/Resume.pdf";
+import { CoffeeRing, Tape, HandArrow, HandNote, SlantEdge, OutlineNumber, StepTag } from "@/components/brew/doodles";
+import {
+  ShotIntro,
+  PourStream,
+  MilkRise,
+  LatteRipple,
+  SteamTrail,
+  CremaCup,
+  FoamBubbles,
+  EmptyCup,
+} from "@/components/brew/motion-layer";
+import { useExtraction } from "@/hooks/use-extraction";
 
 const Reveal = ({ delay = 0, y = 10, children }) => {
   const reduceMotion = usePrefersReducedMotion();
@@ -156,35 +168,6 @@ const PROFILE = {
   ],
 };
 
-function IntroOverlay() {
-  return (
-    <motion.div
-      initial={{ y: 0 }}
-      animate={{ y: "-100%" }}
-      transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
-      className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-white"
-      aria-hidden="true"
-    >
-      <DitherMark variant="intro" className="h-24 w-20 text-black sm:h-32 sm:w-28" />
-      <motion.div
-        initial={{ letterSpacing: "0.6em", opacity: 0 }}
-        animate={{ letterSpacing: "0.02em", opacity: 1 }}
-        transition={{ duration: 0.5, ease: EASE, delay: 0.3 }}
-        className="font-display text-sm uppercase tracking-widest text-black"
-      >
-        ZX
-      </motion.div>
-      <motion.div
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: 0.45, ease: EASE }}
-        style={{ transformOrigin: "center" }}
-        className="absolute bottom-8 left-8 right-8 h-px bg-black"
-      />
-    </motion.div>
-  );
-}
-
 function NavLink({ href, idKey, children, currentKey, pulse, onClick, variant = "item" }) {
   const isActive = currentKey === idKey;
   const reduceMotion = usePrefersReducedMotion();
@@ -218,10 +201,25 @@ function NavLink({ href, idKey, children, currentKey, pulse, onClick, variant = 
   );
 }
 
+// Every section is a step of the brew. Numbers, edges and angles are uneven on purpose.
+const BREW = {
+  home: { step: "00 · grind · 18g" },
+  work: { step: "01 · pour · past extractions", num: "02", rot: -11, pos: "-right-8 -bottom-12 text-[11rem] lg:text-[16rem]", tilt: 1 },
+  "what-i-do": { step: "02 · froth · 60°c", num: "03", rot: 7, pos: "-left-12 top-24 text-[10rem] lg:text-[14rem]", tilt: -1, jag: true },
+  projects: { step: "03 · side roast", num: "04", rot: -4, pos: "right-10 -top-6 text-[9rem] lg:text-[12rem]", tilt: 1, jag: true },
+  publication: { step: "04 · single origin · CHI 2025", num: "05", rot: 13, pos: "left-[40%] -bottom-16 text-[12rem] lg:text-[18rem]", tilt: -1 },
+  education: { step: "05 · where the beans grew", num: "06", rot: -9, pos: "left-8 bottom-6 text-[8rem] lg:text-[11rem]", tilt: 1, jag: true },
+  skills: { step: "06 · tasting notes", num: "07", rot: 5, pos: "-right-4 -top-8 text-[11rem] lg:text-[15rem]", tilt: -1, jag: true },
+  about: { step: "07 · sip", num: "08", rot: -14, pos: "right-[20%] -bottom-20 text-[12rem] lg:text-[17rem]", tilt: 1 },
+  contact: { step: "08 · refill", num: "09", rot: 10, pos: "right-4 top-16 text-[9rem] lg:text-[13rem]", tilt: -1, jag: true },
+};
+
 const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex, compact, children }) => {
   const isInk = tone === "ink";
   const hasVisibleTitle = Boolean(title && title.trim());
   const headingId = hasVisibleTitle ? `${id}-heading` : labelledBy;
+  const brew = BREW[id] ?? {};
+  const stepRot = ((id.length * 7) % 9) - 4;
   return (
     <section
       id={id}
@@ -234,15 +232,29 @@ const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex
           : undefined
       }
     >
+      {id !== "contact" && <SlantEdge toInk={!isInk} tilt={brew.tilt ?? -1} jag={brew.jag} />}
+      {id !== "home" && <MilkRise tone={tone} />}
+      {brew.num && (
+        <OutlineNumber rotate={brew.rot} tone={tone} className={brew.pos}>
+          {brew.num}
+        </OutlineNumber>
+      )}
       <div
         className={`relative z-20 mx-auto max-w-5xl px-6 py-20 text-foreground sm:px-8 lg:max-w-6xl xl:max-w-7xl ${compact ? "lg:py-14" : "lg:py-32 xl:py-40"} ${
           indent === "left" ? "lg:pr-16 xl:pr-28" : indent === "right" ? "lg:pl-16 xl:pl-28" : ""
         }`}
       >
         {hasVisibleTitle && (
-          <h2 id={headingId} className="mb-6 font-display text-[11px] font-normal uppercase tracking-[0.2em] text-muted-foreground">
-            {title}
-          </h2>
+          <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <h2 id={headingId} className="font-display text-[11px] font-normal uppercase tracking-[0.2em] text-muted-foreground">
+              {title}
+            </h2>
+            {brew.step && (
+              <StepTag rotate={stepRot} className="text-[var(--crema)]">
+                {brew.step}
+              </StepTag>
+            )}
+          </div>
         )}
         {children}
       </div>
@@ -261,6 +273,38 @@ const SECTION_TONES = {
   about: "paper",
   contact: "ink",
 };
+
+function ExtractionCard({ job, idx }) {
+  const [hover, setHover] = useState(false);
+  const tilt = [-1.6, 1.1, -0.5, 2.1][idx % 4];
+  const shift = ["lg:ml-0", "lg:ml-14", "lg:ml-4", "lg:ml-24"][idx % 4];
+  const width = ["lg:w-[92%]", "lg:w-[84%]", "lg:w-[88%]", "lg:w-[78%]"][idx % 4];
+  return (
+    <motion.div
+      variants={item}
+      className={`relative ${shift} ${width}`}
+      style={{ rotate: `${tilt}deg` }}
+      onHoverStart={() => setHover(true)}
+      onHoverEnd={() => setHover(false)}
+      whileHover={{ y: -3, rotate: tilt * 0.4 }}
+    >
+      {idx % 2 === 1 && <Tape className="-top-3 left-10" rotate={idx === 1 ? -7 : 5} width={80} />}
+      <Card className={`overflow-hidden rounded-none ${idx === 2 ? "torn-right" : ""} ${idx === 3 ? "border-dashed" : ""}`}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1 text-lg">
+            <CremaCup spinning={hover} size={34} className="-ml-1 shrink-0" />
+            <span>{job.role}</span>
+            <span className="text-muted-foreground">@ {job.org}</span>
+            <span className="font-mono ml-auto text-xs text-muted-foreground">{job.period}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm leading-relaxed">{job.summary}</p>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
 
 export default function App() {
   useDynamicFavicon();
@@ -288,10 +332,11 @@ export default function App() {
   }, []);
 
   useEffect(() => setPulse((p) => p + 1), [active]);
-  useEffect(() => {
-    const t = setTimeout(() => setShowIntro(false), 900);
-    return () => clearTimeout(t);
-  }, []);
+  const [extracting, startExtraction] = useExtraction();
+  const refill = () => {
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    if (!reduceMotion) setTimeout(() => setShowIntro(true), 450);
+  };
 
   const scrollToSection = (id) => (e) => {
     e.preventDefault();
@@ -376,7 +421,10 @@ export default function App() {
         >
           Skip to content
         </a>
-        {showIntro && !reduceMotion && <IntroOverlay />}
+        {showIntro && !reduceMotion && <ShotIntro onDone={() => setShowIntro(false)} />}
+        <PourStream />
+        <LatteRipple />
+        <SteamTrail />
         <ScrollProgressGauge tone={activeTone} />
         <BackgroundShapes active={active} tone={activeTone} />
 
@@ -393,10 +441,17 @@ export default function App() {
               ))}
             </div>
             <div className="flex items-center gap-3">
-              <Button asChild size="sm">
-                <a href={resumePdf} target="_blank" rel="noreferrer">
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Resume
+              <Button asChild size="sm" className="relative overflow-hidden">
+                <a href={resumePdf} target="_blank" rel="noreferrer" onClick={startExtraction}>
+                  <motion.span
+                    aria-hidden="true"
+                    className="absolute inset-y-0 left-0 bg-[var(--crema)]"
+                    initial={false}
+                    animate={{ width: extracting ? "100%" : "0%" }}
+                    transition={{ duration: extracting ? 0.8 : 0.2, ease: "easeInOut" }}
+                  />
+                  <FileDown className="relative h-4 w-4 mr-2" />
+                  <span className="relative">{extracting ? "Extracting…" : "Resume"}</span>
                   <span className="sr-only"> (opens in new tab)</span>
                 </a>
               </Button>
@@ -452,9 +507,14 @@ export default function App() {
           <motion.div ref={heroRef} style={{ y: heroY, opacity: heroOpacity }} layout className="relative">
             <div className="grid items-start gap-10 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] xl:grid-cols-[1.2fr_380px]">
               <div>
-                <p className="uppercase tracking-widest text-[10px] font-display text-muted-foreground mb-3">PORTFOLIO</p>
-                <h1 id="home-heading" className="font-display text-3xl font-extrabold leading-[1.15] sm:text-4xl lg:text-5xl">
-                  Currently a coffee-craved software engineer.
+                <div className="mb-3 flex items-center gap-3">
+                  <p className="uppercase tracking-widest text-[10px] font-display text-muted-foreground">PORTFOLIO</p>
+                  <StepTag rotate={-3} className="text-[var(--crema)]">{BREW.home.step}</StepTag>
+                </div>
+                <h1 id="home-heading" className="font-display text-3xl font-extrabold leading-[1.15] sm:text-4xl lg:text-6xl lg:leading-[1.05]">
+                  Currently a{" "}
+                  <span className="wonky-underline inline-block -rotate-2 font-accent font-normal italic text-[var(--crema)]">coffee-craved</span>{" "}
+                  software engineer.
                 </h1>
                 <p className="mt-4 max-w-lg text-base text-muted-foreground sm:text-lg">
                   Navigating one complex microservice architecture at a time.
@@ -502,8 +562,14 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="lg:-ml-6 lg:mt-10">
-                <Card>
+              <div className="relative lg:-ml-6 lg:mt-24 lg:rotate-[2.5deg]">
+                <CoffeeRing className="-left-16 -top-20 hidden lg:block" size={190} rotate={24} opacity={0.35} />
+                <Tape className="-top-3 left-1/3" rotate={-6} />
+                <div className="pointer-events-none absolute -bottom-16 -left-24 hidden items-start gap-1 text-paper/70 lg:flex">
+                  <HandNote rotate={-8}>latte no. 2, probably</HandNote>
+                  <HandArrow className="h-10 w-14 -translate-y-6" rotate={-30} />
+                </div>
+                <Card className="torn-bottom rounded-none">
                   <CardHeader>
                     <CardTitle className="text-base tracking-tight">Now</CardTitle>
                   </CardHeader>
@@ -537,23 +603,11 @@ export default function App() {
             initial={reduceMotion ? false : "hidden"}
             whileInView="show"
             viewport={{ once: true, amount: 0.2 }}
-            className="grid gap-6"
+            className="relative grid gap-5"
           >
+            <CoffeeRing className="-right-10 top-1/3 hidden lg:block" size={150} rotate={-40} opacity={0.3} />
             {PROFILE.experience.map((job, idx) => (
-              <motion.div key={idx} variants={item} layout>
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1 text-lg">
-                      <span>{job.role}</span>
-                      <span className="text-muted-foreground">@ {job.org}</span>
-                      <span className="ml-auto text-sm text-muted-foreground">{job.period}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-<p className="text-sm leading-relaxed">{job.summary}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <ExtractionCard key={idx} job={job} idx={idx} />
             ))}
           </motion.div>
         </Section>
@@ -562,24 +616,27 @@ export default function App() {
           <VerticalLabel progress={doProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-paper/25 lg:block">
             What I Do
           </VerticalLabel>
-          <div ref={doRef} className="grid gap-6 sm:grid-cols-3">
-            {PROFILE.whatIDo.map((doItem) => (
+          <FoamBubbles notes={["notes of Java", "long Spring Boot finish", "a hint of Python", "Kubernetes, lightly", "Claude Code aftertaste", "SQL, bitter but honest"]} />
+          <div ref={doRef} className="relative z-20 grid gap-6 sm:grid-cols-[1.2fr_0.9fr_1.1fr] sm:items-start">
+            {PROFILE.whatIDo.map((doItem, i) => (
               <motion.div
                 key={doItem.title}
                 variants={item}
                 initial={reduceMotion ? false : "hidden"}
                 whileInView="show"
                 viewport={{ once: true, amount: 0.2 }}
+                className={["sm:mt-0 sm:-rotate-[2.5deg]", "sm:mt-20 sm:rotate-[1.5deg]", "sm:mt-6 sm:-rotate-[0.8deg]"][i]}
               >
-                <Card>
+                <Card className={`rounded-none ${i === 1 ? "torn-bottom bg-[var(--crema-dark)]" : ""} ${i === 2 ? "border-dashed" : ""}`}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{doItem.title}</CardTitle>
+                    <CardTitle className={i === 0 ? "font-accent text-2xl font-normal italic" : "text-base"}>{doItem.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm text-muted-foreground">{doItem.desc}</CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
+          <p className="font-hand relative z-20 mt-10 -rotate-2 text-xl text-paper/60">pop a bubble, there's a tasting note in each</p>
         </Section>
 
         <Section id="projects" title="Projects" compact>
@@ -598,8 +655,15 @@ export default function App() {
               className="grid gap-4"
             >
               {PROFILE.projects.map((p, i) => (
-                <motion.div key={i} variants={item} layout>
-                  <Card className="relative overflow-hidden">
+                <motion.div key={i} variants={item} layout className={`relative ${["-rotate-[1.2deg]", "ml-6 rotate-[0.8deg]", "-ml-2 -rotate-[0.4deg]"][i % 3]}`}>
+                  {p.status && <Tape className="-top-3 right-10" rotate={9} width={70} />}
+                  {p.status && (
+                    <div className="pointer-events-none absolute -top-9 left-40 z-10 hidden items-end gap-1 text-[var(--crema)] lg:flex">
+                      <HandNote rotate={-5}>still roasting, don't peek</HandNote>
+                      <HandArrow className="h-8 w-12 translate-y-3" rotate={110} />
+                    </div>
+                  )}
+                  <Card className="relative overflow-hidden rounded-none">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex flex-wrap items-center gap-2">
                         {p.title}
@@ -663,7 +727,8 @@ export default function App() {
 
         <Section id="education" title="Education" indent="right">
           <Reveal>
-            <div style={{ transform: "rotate(-1.5deg)" }}>
+            <div className="relative" style={{ transform: "rotate(-1.5deg)" }}>
+              <CoffeeRing className="-right-6 -top-16" size={140} rotate={70} opacity={0.4} />
               <Card>
                 <CardContent className="py-6" style={{ transform: "rotate(1.5deg)" }}>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
@@ -690,8 +755,10 @@ export default function App() {
                 </CardHeader>
                 <CardContent>
                   <motion.div className="flex flex-wrap gap-2" variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }}>
-                    {PROFILE.skills.map((s) => (
-                      <Pill key={s}>{s}</Pill>
+                    {PROFILE.skills.map((s, i) => (
+                      <span key={s} className="inline-block" style={{ transform: `rotate(${((i * 37) % 11) - 5}deg) translateY(${((i * 13) % 7) - 3}px)` }}>
+                        <Pill>{s}</Pill>
+                      </span>
                     ))}
                   </motion.div>
                 </CardContent>
@@ -715,7 +782,8 @@ export default function App() {
 
         <Section id="about" title="About Me">
           <div className="flex flex-col items-start gap-8 sm:flex-row sm:items-center">
-            <div className="shrink-0 border border-border p-1" style={{ transform: "rotate(1.5deg)" }}>
+            <div className="relative shrink-0 border border-border bg-paper p-1 pb-6 shadow-[6px_8px_0_rgb(0_0_0/0.08)]" style={{ transform: "rotate(4deg)" }}>
+              <Tape className="-top-3 left-6" rotate={-12} width={70} />
               <img src={aboutPhoto} alt={`${PROFILE.name} outdoors`} className="h-40 w-40 object-cover sm:h-48 sm:w-48" />
             </div>
             <div>
@@ -752,7 +820,10 @@ export default function App() {
                 </motion.div>
               )}
             </AnimatePresence>
-            <p className="mb-3 font-display text-[10px] uppercase tracking-widest text-muted-foreground">CONTACT</p>
+            <div className="mb-3 flex items-center gap-3">
+              <p className="font-display text-[10px] uppercase tracking-widest text-muted-foreground">CONTACT</p>
+              <StepTag rotate={3} className="text-[var(--crema)]">{BREW.contact.step}</StepTag>
+            </div>
             <h2 id="contact-heading" className="max-w-xl font-display text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
               Always open for the next pour.
             </h2>
@@ -779,8 +850,11 @@ export default function App() {
                 </a>
               </Button>
             </div>
-            <div className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground">
-              <span>© {new Date().getFullYear()} ZX Ching</span>
+            <div className="mt-14 flex justify-end">
+              <EmptyCup onRefill={refill} />
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground">
+              <span>© {new Date().getFullYear()} ZX Ching · the cup is empty, thanks for drinking</span>
               <span>Built with React · Tailwind · shadcn/ui</span>
             </div>
           </div>
