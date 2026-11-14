@@ -89,15 +89,16 @@ function DitherShape({ className, w, seed }) {
 
 const RENDERERS = { line: LineShape, ring: RingShape, steam: SteamShape, angle: AngleShape, dither: DitherShape };
 
-export function BackgroundShapes({ active, tone }) {
+export function BackgroundShapes({ active, dark = false }) {
   const reduceMotion = usePrefersReducedMotion();
-  const colorClass = tone === "ink" ? "text-paper" : "text-ink";
+  const colorClass = dark ? "text-milk" : "text-espresso";
 
   return (
     <div className="pointer-events-none fixed inset-0 z-10 hidden lg:block" aria-hidden="true">
       {TYPES.map((type, i) => {
         const { x, y, rotate, scale } = targetFor(active, i);
-        const { w, opacity } = weightFor(i);
+        const { w, opacity: baseOpacity } = weightFor(i);
+        const opacity = dark ? baseOpacity : baseOpacity * 0.55;
         const Render = RENDERERS[type];
         return (
           <motion.div

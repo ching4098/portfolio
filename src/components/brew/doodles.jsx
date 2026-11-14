@@ -12,18 +12,18 @@ export function CoffeeRing({ className = "", size = 160, rotate = 0, opacity = 0
       <path
         d="M100 14 C150 12 188 52 186 102 C184 150 146 188 98 186 C52 184 14 148 16 100 C18 60 46 22 92 15"
         fill="none"
-        stroke="var(--crema)"
+        stroke="var(--mark)"
         strokeWidth="7"
         strokeLinecap="round"
       />
       <path
         d="M100 26 C142 25 174 58 173 100 C172 140 140 173 100 172 C60 171 28 140 28 100"
         fill="none"
-        stroke="var(--crema)"
+        stroke="var(--mark)"
         strokeWidth="2"
         opacity="0.6"
       />
-      <path d="M160 160 C172 170 176 182 170 190" fill="none" stroke="var(--crema)" strokeWidth="4" strokeLinecap="round" />
+      <path d="M160 160 C172 170 176 182 170 190" fill="none" stroke="var(--mark)" strokeWidth="4" strokeLinecap="round" />
     </svg>
   );
 }
@@ -36,9 +36,10 @@ export function Tape({ className = "", rotate = -8, width = 92 }) {
       style={{
         width,
         transform: `rotate(${rotate}deg)`,
-        background: "repeating-linear-gradient(90deg, rgb(176 122 76 / 0.42) 0 6px, rgb(176 122 76 / 0.32) 6px 9px)",
+        background:
+          "repeating-linear-gradient(90deg, color-mix(in srgb, var(--tape) 55%, transparent) 0 6px, color-mix(in srgb, var(--tape) 42%, transparent) 6px 9px)",
         clipPath: "polygon(3% 0, 97% 6%, 100% 50%, 96% 100%, 2% 94%, 0 45%)",
-        boxShadow: "0 1px 0 rgb(0 0 0 / 0.08)",
+        boxShadow: "0 1px 0 rgb(20 14 11 / 0.12)",
       }}
     />
   );
@@ -55,7 +56,7 @@ export function Scribble({ className = "", width = 180, rotate = 0 }) {
       <path
         d="M2 12 C30 4 48 18 74 9 C98 1 118 17 142 8 C156 3 168 10 178 6"
         fill="none"
-        stroke="var(--crema)"
+        stroke="var(--mark)"
         strokeWidth="3"
         strokeLinecap="round"
       />
@@ -82,8 +83,7 @@ export function HandNote({ children, className = "", rotate = -4 }) {
 
 // A slanted, slightly jagged band in the next section's colour along the bottom,
 // so sections meet at an angle instead of a straight cut.
-export function SlantEdge({ toInk, tilt = 1, jag = false }) {
-  const color = toInk ? "var(--ink)" : "var(--paper)";
+export function SlantEdge({ color, tilt = 1, jag = false }) {
   const l = tilt > 0 ? 70 : 0;
   const r = tilt > 0 ? 0 : 70;
   const mid = (t) => Math.round(l + (r - l) * t);
@@ -99,15 +99,15 @@ export function SlantEdge({ toInk, tilt = 1, jag = false }) {
   );
 }
 
-export function OutlineNumber({ children, className = "", rotate = 0, tone = "paper" }) {
+export function OutlineNumber({ children, className = "", rotate = 0, dark = false }) {
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute select-none font-display font-extrabold leading-none ${className}`}
+      className={`pointer-events-none absolute select-none font-display font-semibold leading-none ${className}`}
       style={{
         transform: `rotate(${rotate}deg)`,
         color: "transparent",
-        WebkitTextStroke: `1.5px ${tone === "ink" ? "rgb(250 250 250 / 0.22)" : "rgb(20 20 20 / 0.16)"}`,
+        WebkitTextStroke: `1.5px ${dark ? "rgb(244 238 230 / 0.22)" : "rgb(20 14 11 / 0.16)"}`,
       }}
     >
       {children}
@@ -123,5 +123,35 @@ export function StepTag({ children, rotate = -2, className = "" }) {
     >
       {children}
     </span>
+  );
+}
+
+// A line-drawn cup with three steam wisps. Deliberately off-axis: the caller tilts and parks it at an edge.
+export function SteamCup({ className = "", rotate = 6 }) {
+  const wisps = [
+    { d: "M52 66 C44 54 62 46 54 34 C50 28 56 24 54 18", delay: "0s" },
+    { d: "M80 70 C72 56 90 48 82 34 C78 28 84 22 80 14", delay: "1.05s" },
+    { d: "M108 66 C101 56 116 48 110 38 C107 33 111 30 110 24", delay: "2.1s" },
+  ];
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 170 150"
+      className={`pointer-events-none absolute text-foreground ${className}`}
+      style={{ transform: `rotate(${rotate}deg)` }}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {wisps.map((w, i) => (
+        <path key={i} d={w.d} className="wisp" style={{ animationDelay: w.delay }} opacity="0.85" />
+      ))}
+      <path d="M30 84 C28 84 118 82 138 84 C140 118 128 138 84 140 C42 138 30 118 30 84 Z" />
+      <path d="M138 94 C164 90 164 122 134 122" />
+      <path d="M18 146 C60 152 110 152 156 146" opacity="0.6" />
+      <path d="M44 100 C60 96 96 98 124 96" opacity="0.5" strokeWidth="1.6" />
+    </svg>
   );
 }

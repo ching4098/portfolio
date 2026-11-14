@@ -29,7 +29,7 @@ export function PaperShowcase() {
           variants={cascadeItem}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           style={{ rotate: p.rotate }}
-          className={`${i > 0 ? "-ml-6" : ""} shrink-0 border border-border bg-paper p-1`}
+          className={`${i > 0 ? "-ml-6" : ""} shrink-0 border border-border bg-milk p-1`}
         >
           <img src={p.src} alt={p.alt} className={`${p.w} object-cover`} />
         </motion.div>

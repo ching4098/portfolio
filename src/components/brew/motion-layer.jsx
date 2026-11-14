@@ -15,7 +15,7 @@ export function ShotIntro({ onDone }) {
       initial={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)" }}
       animate={{ clipPath: "polygon(0 0, 100% 0, 100% 0%, 0 0%)" }}
       transition={{ duration: 0.55, ease: EASE, delay: 0.95 }}
-      className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center bg-ink text-paper"
+      className="pointer-events-none fixed inset-0 z-[60] flex flex-col items-center justify-center bg-espresso text-milk"
       aria-hidden="true"
     >
       <motion.div
@@ -23,7 +23,7 @@ export function ShotIntro({ onDone }) {
         animate={{ scaleY: [0, 1, 1, 0] }}
         transition={{ duration: 0.95, times: [0, 0.35, 0.8, 1], ease: "easeIn" }}
         style={{ transformOrigin: "top" }}
-        className="absolute left-1/2 top-0 h-[44vh] w-[3px] -translate-x-1/2 bg-[var(--crema)]"
+        className="absolute left-1/2 top-0 h-[44vh] w-[3px] -translate-x-1/2 bg-crema"
       />
       <div className="relative mt-[10vh]">
         <DitherMark variant="intro" className="h-24 w-20 sm:h-32 sm:w-28" />
@@ -32,14 +32,14 @@ export function ShotIntro({ onDone }) {
           animate={{ scaleY: 1 }}
           transition={{ duration: 0.5, delay: 0.35, ease: EASE }}
           style={{ transformOrigin: "bottom" }}
-          className="absolute inset-x-[18%] bottom-[14%] top-[44%] bg-[var(--crema)] mix-blend-screen opacity-60"
+          className="absolute inset-x-[18%] bottom-[14%] top-[44%] bg-crema mix-blend-screen opacity-60"
         />
       </div>
       <motion.span
         initial={{ opacity: 0, letterSpacing: "0.6em" }}
         animate={{ opacity: 1, letterSpacing: "0.12em" }}
         transition={{ duration: 0.5, delay: 0.3, ease: EASE }}
-        className="font-mono mt-5 text-[11px] uppercase text-ash"
+        className="font-mono mt-5 text-[11px] uppercase text-steam"
       >
         pulling a shot · 25s
       </motion.span>
@@ -48,17 +48,17 @@ export function ShotIntro({ onDone }) {
 }
 
 /* 02 · The pour follows you: a thin stream down the right edge, espresso turning to milk. */
-export function PourStream() {
+export function PourStream({ edge = "#F4EEE6" }) {
   const reduce = usePrefersReducedMotion();
   const { scrollYProgress } = useScroll();
   const height = useTransform(scrollYProgress, [0, 1], ["4%", "100%"]);
-  const color = useTransform(scrollYProgress, [0, 0.35, 0.7, 1], ["#3a1b12", "#6b4228", "#b07a4c", "#efe3d3"]);
+  const color = useTransform(scrollYProgress, [0, 0.35, 0.7, 1], ["#3A2418", "#6B4228", "#B07A4C", "#F4EEE6"]);
   if (reduce) return null;
   return (
     <div className="pointer-events-none fixed right-[4.6rem] top-0 z-30 hidden h-screen w-[3px] sm:block" aria-hidden="true">
-      <motion.div style={{ height, backgroundColor: color }} className="w-full rounded-b-full" />
+      <motion.div style={{ height, backgroundColor: color, boxShadow: `0 0 0 1px ${edge}` }} className="w-full rounded-b-full" />
       <motion.div
-        style={{ top: height, backgroundColor: color }}
+        style={{ top: height, backgroundColor: color, boxShadow: `0 0 0 1px ${edge}` }}
         animate={{ y: [0, 10, 0], opacity: [1, 0.4, 1] }}
         transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
         className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full"
@@ -68,11 +68,10 @@ export function PourStream() {
 }
 
 /* 03 · Milk rises: a jagged band pours up through a section the first time you reach it. */
-export function MilkRise({ tone }) {
+export function MilkRise({ color }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, amount: 0.35 });
   const reduce = usePrefersReducedMotion();
-  const fill = tone === "ink" ? "var(--crema-dark)" : "var(--milk)";
   if (reduce) return <div ref={ref} className="absolute inset-0" aria-hidden="true" style={{ pointerEvents: "none" }} />;
   return (
     <div ref={ref} className="pointer-events-none absolute inset-0 z-[25] overflow-hidden" aria-hidden="true">
@@ -82,7 +81,7 @@ export function MilkRise({ tone }) {
         transition={{ duration: 1.05, times: [0, 0.45, 1], ease: [0.65, 0, 0.35, 1] }}
         className="absolute inset-0"
         style={{
-          background: fill,
+          background: color,
           clipPath: "polygon(0 6%, 9% 2%, 21% 7%, 34% 1%, 47% 6%, 61% 0, 74% 5%, 88% 1%, 100% 5%, 100% 100%, 0 100%)",
         }}
       />
@@ -115,7 +114,7 @@ export function LatteRipple() {
               initial={{ scale: 0.1, opacity: 0.9 }}
               animate={{ scale: 1, opacity: 0 }}
               transition={{ duration: 0.75, delay, ease: "easeOut" }}
-              className="absolute -left-8 -top-8 h-16 w-16 rounded-full border-2 border-[var(--milk)] mix-blend-difference"
+              className="absolute -left-8 -top-8 h-16 w-16 rounded-full border-2 border-milk mix-blend-difference"
               style={{ borderRadius: "48% 52% 46% 54%" }}
             />
           ))}
@@ -138,7 +137,7 @@ export function SteamTrail() {
       if (now - last < 70) return;
       last = now;
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (!el || !el.closest("section.dark")) return;
+      if (!el || !el.closest("section.ground-dark")) return;
       const puff = { id: id++, x: e.clientX + (Math.random() * 10 - 5), y: e.clientY, r: Math.random() * 30 - 15 };
       setPuffs((p) => [...p.slice(-14), puff]);
       setTimeout(() => setPuffs((p) => p.filter((x) => x.id !== puff.id)), 1100);
@@ -152,7 +151,7 @@ export function SteamTrail() {
         <motion.svg
           key={p.id}
           viewBox="0 0 20 40"
-          className="absolute h-8 w-4 text-paper"
+          className="absolute h-8 w-4 text-milk"
           style={{ left: p.x, top: p.y - 24 }}
           initial={{ opacity: 0.45, y: 0, rotate: p.r }}
           animate={{ opacity: 0, y: -42, rotate: p.r * 1.6, scaleX: 1.5 }}
@@ -177,10 +176,10 @@ export function CremaCup({ spinning, size = 44, className = "" }) {
       animate={spinning && !reduce ? { rotate: 360 } : { rotate: 0 }}
       transition={spinning ? { duration: 2.6, repeat: Infinity, ease: "linear" } : { duration: 0.4 }}
     >
-      <circle cx="30" cy="30" r="28" fill="var(--crema-dark)" />
-      <circle cx="30" cy="30" r="22" fill="var(--crema)" opacity="0.9" />
-      <path d="M30 9 C44 18 42 30 30 30 C18 30 16 43 30 51" fill="none" stroke="var(--milk)" strokeWidth="3" strokeLinecap="round" />
-      <path d="M13 22 C20 26 22 34 17 40" fill="none" stroke="var(--milk)" strokeWidth="1.6" strokeLinecap="round" opacity="0.7" />
+      <circle cx="30" cy="30" r="28" fill="#140E0B" />
+      <circle cx="30" cy="30" r="22" fill="#B07A4C" opacity="0.9" />
+      <path d="M30 9 C44 18 42 30 30 30 C18 30 16 43 30 51" fill="none" stroke="#F4EEE6" strokeWidth="3" strokeLinecap="round" />
+      <path d="M13 22 C20 26 22 34 17 40" fill="none" stroke="#F4EEE6" strokeWidth="1.6" strokeLinecap="round" opacity="0.7" />
     </motion.svg>
   );
 }
@@ -211,7 +210,7 @@ export function FoamBubbles({ notes }) {
                   type="button"
                   aria-label={`Pop a foam bubble to read a tasting note`}
                   onClick={() => setPopped((p) => ({ ...p, [i]: true }))}
-                  className="pointer-events-auto rounded-full border-2 border-paper/50 transition-colors hover:border-[var(--crema)]"
+                  className="pointer-events-auto rounded-full border-2 border-foreground/50 transition-colors hover:border-[var(--accent-text)]"
                   style={{ width: s.s, height: s.s, borderRadius: i % 2 ? "47% 53% 52% 48%" : "52% 48% 45% 55%" }}
                   animate={reduce ? {} : { y: [0, -8 - i, 0] }}
                   exit={{ scale: 1.5, opacity: 0 }}
@@ -222,7 +221,7 @@ export function FoamBubbles({ notes }) {
                   key="note"
                   initial={{ opacity: 0, scale: 0.6 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="font-hand pointer-events-auto block text-2xl text-[var(--crema)]"
+                  className="font-hand pointer-events-auto block text-2xl text-[var(--accent-text)]"
                   style={{ transform: `rotate(${(i % 3) * 4 - 4}deg)` }}
                 >
                   {note}
@@ -246,7 +245,7 @@ export function EmptyCup({ onRefill }) {
       <motion.svg
         aria-hidden="true"
         viewBox="0 0 110 110"
-        className="h-20 w-20 text-paper"
+        className="h-20 w-20 text-foreground"
         style={{ transformOrigin: "30% 90%" }}
         animate={inView && !reduce ? { rotate: -32 } : { rotate: 0 }}
         transition={{ type: "spring", stiffness: 120, damping: 9, delay: 0.3 }}
@@ -257,7 +256,7 @@ export function EmptyCup({ onRefill }) {
       <button
         type="button"
         onClick={onRefill}
-        className="font-mono mb-2 border border-paper/60 px-3 py-2 text-xs uppercase tracking-[0.18em] text-paper transition hover:-translate-y-0.5 hover:bg-paper hover:text-ink active:translate-y-0"
+        className="font-mono mb-2 inline-flex min-h-11 items-center border border-foreground/60 px-4 py-2 text-xs uppercase tracking-[0.18em] text-foreground transition duration-150 hover:-translate-y-0.5 hover:bg-foreground hover:text-background active:translate-y-0 active:scale-[0.985]"
       >
         Refill ↺
       </button>

@@ -16,9 +16,9 @@ export function GithubRepos() {
             href={r.url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 border border-border px-3 py-1 text-sm hover:opacity-70"
+            className="lift inline-flex min-h-11 items-center gap-1 border border-border px-3 py-1 text-sm hover:border-foreground sm:min-h-9"
           >
-            {formatRepoName(r.name)}
+            <span className="draw-underline">{formatRepoName(r.name)}</span>
             {r.language && <span className="text-xs text-muted-foreground">· {r.language}</span>}
             <ArrowUpRight className="h-3.5 w-3.5" />
             <span className="sr-only"> (opens in new tab)</span>

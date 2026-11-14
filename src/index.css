@@ -3,11 +3,23 @@
 
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.dark :focus-visible {
-  outline-color: var(--paper);
+
+@theme {
+  --color-espresso: #140e0b;
+  --color-roast: #2a1a12;
+  --color-dark-crema: #3a2418;
+  --color-bark: #4a2e1e;
+  --color-mocha: #6b4228;
+  --color-dust: #8c735f;
+  --color-crema: #b07a4c;
+  --color-caramel: #c8955b;
+  --color-steam: #c9b8a6;
+  --color-honey: #e9c9a0;
+  --color-latte: #e9d9c4;
+  --color-milk: #f4eee6;
 }
 
 @theme inline {
@@ -47,13 +59,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --color-ink: var(--ink);
-  --color-graphite: var(--graphite);
-  --color-ash: var(--ash);
-  --color-mist: var(--mist);
-  --color-paper: var(--paper);
-  --font-display: "Jost", ui-sans-serif, system-ui, sans-serif;
-  --font-accent: "Libre Caslon Display", ui-serif, Georgia, serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
   --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Space Mono", ui-monospace, monospace;
   --font-hand: "Caveat", "Comic Sans MS", cursive;
@@ -62,87 +68,56 @@
 :root {
   --radius: 0.25rem;
 
-  --ink: oklch(0.145 0 0);
-  --graphite: oklch(0.368 0 0);
-  --ash: oklch(0.633 0 0);
-  --mist: oklch(0.87 0 0);
-  --paper: oklch(0.985 0 0);
+  /* palette (the home ground is the page default; sections override these inline) */
+  --espresso: #140e0b;
+  --roast: #2a1a12;
+  --dark-crema: #3a2418;
+  --bark: #4a2e1e;
+  --mocha: #6b4228;
+  --dust: #8c735f;
   --crema: #b07a4c;
-  --crema-dark: #3a1b12;
-  --milk: #efe3d3;
+  --crema-dark: #3a2418;
+  --caramel: #c8955b;
+  --steam: #c9b8a6;
+  --honey: #e9c9a0;
+  --latte: #e9d9c4;
+  --milk: #f4eee6;
 
-  --background: var(--paper);
-  --foreground: var(--ink);
-  --card: var(--paper);
-  --card-foreground: var(--ink);
-  --popover: var(--paper);
-  --popover-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: var(--paper);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: var(--ink);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: var(--graphite);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: var(--ink);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: var(--ash);
-  --input: var(--mist);
-  --ring: var(--graphite);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: var(--ink);
-  --foreground: var(--paper);
-  --card: var(--ink);
-  --card-foreground: var(--paper);
-  --popover: var(--ink);
-  --popover-foreground: var(--paper);
-  --primary: var(--paper);
-  --primary-foreground: var(--ink);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: var(--paper);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: var(--ash);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: var(--paper);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: var(--mist);
-  --input: var(--mist);
-  --ring: var(--mist);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-
-  --crema-wash: radial-gradient(
-    circle at var(--wash-x, 20%) var(--wash-y, 15%),
-    #3a1b12 0%,
-    #170d0a 45%,
-    var(--ink) 80%
-  );
+  --background: var(--espresso);
+  --foreground: var(--milk);
+  --card: var(--roast);
+  --card-alt: var(--dark-crema);
+  --card-foreground: var(--milk);
+  --popover: var(--roast);
+  --popover-foreground: var(--milk);
+  --primary: var(--milk);
+  --primary-foreground: var(--espresso);
+  --secondary: var(--roast);
+  --secondary-foreground: var(--milk);
+  --muted: var(--roast);
+  --muted-foreground: var(--steam);
+  --accent: var(--roast);
+  --accent-foreground: var(--milk);
+  --destructive: #c8955b;
+  --border: rgb(201 184 166 / 0.4);
+  --input: rgb(201 184 166 / 0.4);
+  --ring: var(--caramel);
+  --mark: var(--crema);
+  --tape: var(--caramel);
+  --accent-text: var(--caramel);
+  --chart-1: var(--caramel);
+  --chart-2: var(--crema);
+  --chart-3: var(--mocha);
+  --chart-4: var(--honey);
+  --chart-5: var(--steam);
+  --sidebar: var(--roast);
+  --sidebar-foreground: var(--milk);
+  --sidebar-primary: var(--caramel);
+  --sidebar-primary-foreground: var(--espresso);
+  --sidebar-accent: var(--dark-crema);
+  --sidebar-accent-foreground: var(--milk);
+  --sidebar-border: var(--bark);
+  --sidebar-ring: var(--caramel);
 }
 
 @layer base {
@@ -150,7 +125,7 @@
     @apply border-border outline-ring/50;
   }
   html {
-    scroll-snap-type: y mandatory;
+    scroll-snap-type: y proximity;
     overflow-x: hidden;
   }
   body {
@@ -166,7 +141,66 @@
   clip-path: polygon(0 0, 97% 0, 100% 9%, 96% 21%, 99% 34%, 95% 47%, 100% 61%, 96% 74%, 99% 87%, 96% 100%, 0 100%);
 }
 .wonky-underline {
-  text-decoration: underline wavy var(--crema);
+  text-decoration: underline wavy var(--mark);
   text-decoration-thickness: 2px;
   text-underline-offset: 8px;
+}
+
+/* Dark sections: a soft glow of the next roast up, centred where --wash-x/--wash-y say. */
+.crema-wash {
+  background-image: radial-gradient(circle at var(--wash-x, 20%) var(--wash-y, 15%), var(--wash-a) 0%, var(--wash-b) 75%);
+}
+
+/* Underlines draw in from the left on hover and leave to the right. */
+.draw-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 100% 100%;
+  background-size: 0% 1.5px;
+  transition: background-size 150ms cubic-bezier(0.2, 0.8, 0.2, 1), background-position 0s 150ms;
+}
+.draw-underline:hover,
+.draw-underline:focus-visible,
+.draw-underline[aria-current="true"] {
+  background-position: 0% 100%;
+  background-size: 100% 1.5px;
+  transition: background-size 150ms cubic-bezier(0.2, 0.8, 0.2, 1), background-position 0s;
+}
+.link-rest {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+/* Linked cards lift 2px. */
+.lift {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 180ms;
+}
+.lift:hover {
+  transform: translateY(-2px);
+}
+
+/* The cup in the hero: three wisps that curl up and fade, out of step with each other. */
+@keyframes wisp {
+  0% { opacity: 0; transform: translateY(10px); }
+  30% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-16px); }
+}
+.wisp {
+  animation: wisp 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .wisp { animation: none; opacity: 0.8; transform: none; }
+  .lift:hover { transform: none; }
 }

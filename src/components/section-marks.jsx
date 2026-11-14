@@ -12,7 +12,7 @@ export function VerticalLabel({ children, className = "", progress }) {
     <motion.span
       aria-hidden
       style={{ y, opacity, rotate: 180, writingMode: "vertical-rl" }}
-      className={`pointer-events-none absolute font-display text-[11px] uppercase tracking-[0.25em] ${className}`}
+      className={`pointer-events-none absolute font-mono text-[11px] uppercase tracking-[0.25em] ${className}`}
     >
       {children}
     </motion.span>

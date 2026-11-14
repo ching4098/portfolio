@@ -17,7 +17,8 @@ import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
 import aboutPhoto from "@/assets/about-photo.png";
 import { Mail, Github, Linkedin, FileDown, School, BookOpen, Menu, X } from "lucide-react";
 import resumePdf from "../public/Resume.pdf";
-import { CoffeeRing, Tape, HandArrow, HandNote, SlantEdge, OutlineNumber, StepTag } from "@/components/brew/doodles";
+import { CoffeeRing, Tape, HandArrow, HandNote, SlantEdge, OutlineNumber, StepTag, SteamCup } from "@/components/brew/doodles";
+import { GROUNDS, SECTION_ORDER, groundOf, nextGroundOf, groundVars } from "@/lib/grounds";
 import {
   ShotIntro,
   PourStream,
@@ -173,22 +174,22 @@ function NavLink({ href, idKey, children, currentKey, pulse, onClick, variant = 
   const reduceMotion = usePrefersReducedMotion();
   const labelClass =
     variant === "brand"
-      ? "font-display font-semibold tracking-tight text-ink hover:opacity-70"
-      : `hover:opacity-70 ${isActive ? "font-medium" : ""}`;
+      ? "draw-underline font-display text-lg font-normal tracking-tight"
+      : `${isActive ? "font-medium" : "draw-underline"}`;
   return (
-    <a href={href} onClick={onClick} className="relative inline-flex items-center px-0.5">
+    <a href={href} onClick={onClick} className="relative inline-flex min-h-11 items-center px-0.5">
       <span className={labelClass}>{children}</span>
       {isActive && (
         <>
           <motion.span
             layoutId="nav-underline"
-            className="absolute left-0 right-0 -bottom-1 h-[2px] rounded bg-ink"
+            className="absolute left-0 right-0 bottom-2 h-[2px] rounded bg-foreground"
             transition={{ type: "spring", stiffness: 600, damping: 38 }}
           />
           {!reduceMotion && (
             <motion.span
               key={`echo-${idKey}-${pulse}`}
-              className="absolute left-0 right-0 -bottom-1 h-[2px] rounded bg-ink/40"
+              className="absolute left-0 right-0 bottom-2 h-[2px] rounded bg-foreground/40"
               initial={{ scaleX: 1.8, opacity: 0.35, height: 3 }}
               animate={{ scaleX: 1, opacity: 0, height: 2 }}
               transition={{ duration: 0.5, ease: EASE }}
@@ -214,8 +215,9 @@ const BREW = {
   contact: { step: "08 · refill", num: "09", rot: 10, pos: "right-4 top-16 text-[9rem] lg:text-[13rem]", tilt: -1, jag: true },
 };
 
-const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex, compact, children }) => {
-  const isInk = tone === "ink";
+const Section = ({ id, title, wash, indent, labelledBy, tabIndex, compact, children }) => {
+  const ground = groundOf(id);
+  const next = nextGroundOf(id);
   const hasVisibleTitle = Boolean(title && title.trim());
   const headingId = hasVisibleTitle ? `${id}-heading` : labelledBy;
   const brew = BREW[id] ?? {};
@@ -225,17 +227,21 @@ const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex
       id={id}
       tabIndex={tabIndex}
       aria-labelledby={headingId}
-      className={`relative grid min-h-screen w-full snap-start items-center overflow-hidden ${isInk ? "dark bg-ink" : ""}`}
-      style={
-        isInk
-          ? { backgroundImage: "var(--crema-wash)", "--wash-x": wash?.x, "--wash-y": wash?.y }
-          : undefined
-      }
+      className={`relative grid min-h-screen w-full snap-start items-center overflow-hidden bg-background text-foreground ${
+        ground.dark ? "ground-dark crema-wash" : "ground-light"
+      }`}
+      style={{
+        ...groundVars(ground),
+        "--wash-x": wash?.x,
+        "--wash-y": wash?.y,
+        "--wash-a": ground.wash?.[0],
+        "--wash-b": ground.wash?.[1],
+      }}
     >
-      {id !== "contact" && <SlantEdge toInk={!isInk} tilt={brew.tilt ?? -1} jag={brew.jag} />}
-      {id !== "home" && <MilkRise tone={tone} />}
+      {next && <SlantEdge color={next.bg} tilt={brew.tilt ?? -1} jag={brew.jag} />}
+      {id !== "home" && <MilkRise color={ground.rise} />}
       {brew.num && (
-        <OutlineNumber rotate={brew.rot} tone={tone} className={brew.pos}>
+        <OutlineNumber rotate={brew.rot} dark={ground.dark} className={brew.pos}>
           {brew.num}
         </OutlineNumber>
       )}
@@ -246,11 +252,11 @@ const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex
       >
         {hasVisibleTitle && (
           <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <h2 id={headingId} className="font-display text-[11px] font-normal uppercase tracking-[0.2em] text-muted-foreground">
+            <h2 id={headingId} className="font-mono text-[11px] font-normal uppercase tracking-[0.2em] text-muted-foreground">
               {title}
             </h2>
             {brew.step && (
-              <StepTag rotate={stepRot} className="text-[var(--crema)]">
+              <StepTag rotate={stepRot} className="text-[var(--accent-text)]">
                 {brew.step}
               </StepTag>
             )}
@@ -260,18 +266,6 @@ const Section = ({ id, title, tone = "paper", wash, indent, labelledBy, tabIndex
       </div>
     </section>
   );
-};
-
-const SECTION_TONES = {
-  home: "ink",
-  work: "paper",
-  "what-i-do": "ink",
-  projects: "paper",
-  publication: "ink",
-  education: "paper",
-  skills: "ink",
-  about: "paper",
-  contact: "ink",
 };
 
 function ExtractionCard({ job, idx }) {
@@ -291,11 +285,11 @@ function ExtractionCard({ job, idx }) {
       {idx % 2 === 1 && <Tape className="-top-3 left-10" rotate={idx === 1 ? -7 : 5} width={80} />}
       <Card className={`overflow-hidden rounded-none ${idx === 2 ? "torn-right" : ""} ${idx === 3 ? "border-dashed" : ""}`}>
         <CardHeader className="pb-3">
-          <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1 text-lg">
+          <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xl leading-tight">
             <CremaCup spinning={hover} size={34} className="-ml-1 shrink-0" />
             <span>{job.role}</span>
             <span className="text-muted-foreground">@ {job.org}</span>
-            <span className="font-mono ml-auto text-xs text-muted-foreground">{job.period}</span>
+            <span className="ml-auto font-mono text-xs text-muted-foreground">{job.period}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -313,10 +307,10 @@ export default function App() {
   const [pulse, setPulse] = useState(0);
   const [showIntro, setShowIntro] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const activeTone = SECTION_TONES[active] ?? "paper";
+  const activeGround = groundOf(active);
 
   useEffect(() => {
-    const ids = ["home", "work", "what-i-do", "projects", "publication", "education", "skills", "about", "contact"];
+    const ids = SECTION_ORDER;
     const sections = ids.map((id) => document.getElementById(id)).filter(Boolean);
     const obs = new IntersectionObserver(
       (entries) => {
@@ -417,23 +411,26 @@ export default function App() {
       <div className="min-h-screen bg-background font-sans text-foreground">
         <a
           href="#home"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:text-paper"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded focus:bg-espresso focus:px-4 focus:py-2 focus:text-sm focus:text-milk focus:outline-caramel"
         >
           Skip to content
         </a>
         {showIntro && !reduceMotion && <ShotIntro onDone={() => setShowIntro(false)} />}
-        <PourStream />
+        <PourStream edge={activeGround.fg} />
         <LatteRipple />
         <SteamTrail />
-        <ScrollProgressGauge tone={activeTone} />
-        <BackgroundShapes active={active} tone={activeTone} />
+        <ScrollProgressGauge dark={activeGround.dark} />
+        <BackgroundShapes active={active} dark={activeGround.dark} />
 
-        <header className="sticky top-0 z-30 border-b border-border bg-paper/90 backdrop-blur">
-          <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
+        <header
+          className="sticky top-0 z-30 border-b border-border bg-[color-mix(in_srgb,var(--background)_92%,transparent)] text-foreground backdrop-blur transition-[background-color,color,border-color] duration-500"
+          style={groundVars(activeGround)}
+        >
+          <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-2 sm:px-8">
             <NavLink href="#home" idKey="home" currentKey={active} pulse={pulse} onClick={scrollToSection("home")} variant="brand">
               ZX Ching
             </NavLink>
-            <div className="hidden lg:flex gap-5 text-sm text-ink">
+            <div className="hidden gap-5 text-sm text-foreground lg:flex">
               {navItems.map(({ id, label }) => (
                 <NavLink key={id} href={`#${id}`} idKey={id} currentKey={active} pulse={pulse} onClick={scrollToSection(id)}>
                   {label}
@@ -445,7 +442,7 @@ export default function App() {
                 <a href={resumePdf} target="_blank" rel="noreferrer" onClick={startExtraction}>
                   <motion.span
                     aria-hidden="true"
-                    className="absolute inset-y-0 left-0 bg-[var(--crema)]"
+                    className="absolute inset-y-0 left-0 bg-[var(--mark)]"
                     initial={false}
                     animate={{ width: extracting ? "100%" : "0%" }}
                     transition={{ duration: extracting ? 0.8 : 0.2, ease: "easeInOut" }}
@@ -457,7 +454,7 @@ export default function App() {
               </Button>
               <button
                 type="button"
-                className="-mr-1 flex h-9 w-9 items-center justify-center text-ink lg:hidden"
+                className="-mr-1 flex h-11 w-11 items-center justify-center text-foreground transition-transform duration-150 active:scale-95 lg:hidden"
                 aria-label="Toggle navigation menu"
                 aria-expanded={mobileNavOpen}
                 aria-controls="mobile-nav-panel"
@@ -474,7 +471,7 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
                   transition={{ duration: reduceMotion ? 0 : 0.2, ease: EASE }}
-                  className="absolute inset-x-0 top-full flex flex-col border-b border-border bg-paper text-sm text-ink lg:hidden"
+                  className="absolute inset-x-0 top-full flex flex-col border-b border-border bg-background text-sm text-foreground lg:hidden"
                 >
                   {navItems.map(({ id, label }) => (
                     <a
@@ -484,7 +481,7 @@ export default function App() {
                         scrollToSection(id)(e);
                         setMobileNavOpen(false);
                       }}
-                      className={`border-t border-border px-6 py-3 first:border-t-0 sm:px-8 ${active === id ? "font-medium" : ""}`}
+                      className={`flex min-h-12 items-center border-t border-border px-6 first:border-t-0 sm:px-8 ${active === id ? "font-medium" : ""}`}
                     >
                       {label}
                     </a>
@@ -495,10 +492,10 @@ export default function App() {
           </nav>
         </header>
 
-        <Section id="home" tone="ink" wash={{ x: "80%", y: "10%" }} labelledBy="home-heading" tabIndex={-1}>
+        <Section id="home" wash={{ x: "80%", y: "10%" }} labelledBy="home-heading" tabIndex={-1}>
           <div
             aria-hidden
-            className="pointer-events-none absolute -right-10 -top-16 select-none font-display text-[9rem] font-extrabold leading-none text-paper/15 sm:text-[13rem]"
+            className="pointer-events-none absolute -right-10 -top-16 select-none font-display text-[9rem] font-semibold leading-none text-foreground/10 sm:text-[13rem]"
             style={{ transform: "rotate(8deg)" }}
           >
             01
@@ -508,15 +505,15 @@ export default function App() {
             <div className="grid items-start gap-10 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] xl:grid-cols-[1.2fr_380px]">
               <div>
                 <div className="mb-3 flex items-center gap-3">
-                  <p className="uppercase tracking-widest text-[10px] font-display text-muted-foreground">PORTFOLIO</p>
-                  <StepTag rotate={-3} className="text-[var(--crema)]">{BREW.home.step}</StepTag>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">PORTFOLIO</p>
+                  <StepTag rotate={-3} className="text-[var(--accent-text)]">{BREW.home.step}</StepTag>
                 </div>
-                <h1 id="home-heading" className="font-display text-3xl font-extrabold leading-[1.15] sm:text-4xl lg:text-6xl lg:leading-[1.05]">
+                <h1 id="home-heading" className="font-display text-[2.75rem] font-light leading-[1.12] tracking-[-0.02em] sm:text-6xl md:leading-[1.02] md:text-7xl lg:text-[5.5rem] xl:text-[5.75rem]">
                   Currently a{" "}
-                  <span className="wonky-underline inline-block -rotate-2 font-accent font-normal italic text-[var(--crema)]">coffee-craved</span>{" "}
+                  <span className="wonky-underline inline-block -rotate-2 font-display font-light italic text-caramel">coffee-craved</span>{" "}
                   software engineer.
                 </h1>
-                <p className="mt-4 max-w-lg text-base text-muted-foreground sm:text-lg">
+                <p className="mt-6 max-w-lg text-base text-muted-foreground sm:text-lg">
                   Navigating one complex microservice architecture at a time.
                 </p>
 
@@ -565,19 +562,29 @@ export default function App() {
               <div className="relative lg:-ml-6 lg:mt-24 lg:rotate-[2.5deg]">
                 <CoffeeRing className="-left-16 -top-20 hidden lg:block" size={190} rotate={24} opacity={0.35} />
                 <Tape className="-top-3 left-1/3" rotate={-6} />
-                <div className="pointer-events-none absolute -bottom-16 -left-24 hidden items-start gap-1 text-paper/70 lg:flex">
+                <div className="pointer-events-none absolute -bottom-16 -left-24 hidden items-start gap-1 text-muted-foreground lg:flex">
                   <HandNote rotate={-8}>latte no. 2, probably</HandNote>
                   <HandArrow className="h-10 w-14 -translate-y-6" rotate={-30} />
                 </div>
-                <Card className="torn-bottom rounded-none">
-                  <CardHeader>
-                    <CardTitle className="text-base tracking-tight">Now</CardTitle>
+                <Card className="torn-bottom rounded-none border-dashed pb-3">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="font-display text-2xl font-light italic tracking-tight">Now</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="text-sm font-medium">{PROFILE.now.title}</div>
-                    <div className="text-xs text-muted-foreground">{PROFILE.now.period}</div>
+                  <CardContent className="space-y-0">
+                    <dl className="divide-y divide-dashed divide-border border-y border-dashed border-border">
+                      {[
+                        ["Bean", PROFILE.now.title],
+                        ["Origin", "Tokyo"],
+                        ["Brew time", PROFILE.now.period],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex items-baseline gap-4 py-2">
+                          <dt className="w-[5.5rem] shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</dt>
+                          <dd className="text-sm font-medium">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
                     <motion.p
-                      className="mt-2 text-sm"
+                      className="pt-4 text-sm"
                       initial={{ opacity: 0, y: 6 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
@@ -591,10 +598,11 @@ export default function App() {
               </div>
             </div>
           </motion.div>
+          <SteamCup className="right-3 top-28 z-10 w-20 sm:bottom-24 sm:right-1 sm:top-auto sm:w-32 lg:bottom-14 lg:right-[1.5%] lg:w-44" rotate={-8} />
         </Section>
 
         <Section id="work" title="Experience" indent="left" compact>
-          <VerticalLabel progress={workProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-ink/20 lg:block">
+          <VerticalLabel progress={workProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-foreground/20 lg:block">
             Experience
           </VerticalLabel>
           <motion.div
@@ -612,8 +620,8 @@ export default function App() {
           </motion.div>
         </Section>
 
-        <Section id="what-i-do" title="What I Do" tone="ink" wash={{ x: "15%", y: "15%" }}>
-          <VerticalLabel progress={doProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-paper/25 lg:block">
+        <Section id="what-i-do" title="What I Do" wash={{ x: "15%", y: "15%" }}>
+          <VerticalLabel progress={doProgress} className="left-0 top-1/2 hidden -translate-y-1/2 text-foreground/25 lg:block">
             What I Do
           </VerticalLabel>
           <FoamBubbles notes={["notes of Java", "long Spring Boot finish", "a hint of Python", "Kubernetes, lightly", "Claude Code aftertaste", "SQL, bitter but honest"]} />
@@ -627,16 +635,17 @@ export default function App() {
                 viewport={{ once: true, amount: 0.2 }}
                 className={["sm:mt-0 sm:-rotate-[2.5deg]", "sm:mt-20 sm:rotate-[1.5deg]", "sm:mt-6 sm:-rotate-[0.8deg]"][i]}
               >
-                <Card className={`rounded-none ${i === 1 ? "torn-bottom bg-[var(--crema-dark)]" : ""} ${i === 2 ? "border-dashed" : ""}`}>
+                <Card className={`rounded-none ${i === 1 ? "torn-bottom bg-[var(--card-alt)]" : ""} ${i === 2 ? "border-dashed" : ""}`}>
                   <CardHeader className="pb-2">
-                    <CardTitle className={i === 0 ? "font-accent text-2xl font-normal italic" : "text-base"}>{doItem.title}</CardTitle>
+                    <span className="mb-2 block font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent-text)]">{["65°C", "60°C", "55°C"][i]}</span>
+                    <CardTitle className={i === 0 ? "font-display text-2xl font-light italic" : "text-xl leading-tight"}>{doItem.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm text-muted-foreground">{doItem.desc}</CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
-          <p className="font-hand relative z-20 mt-10 -rotate-2 text-xl text-paper/60">pop a bubble, there's a tasting note in each</p>
+          <p className="font-hand relative z-20 mt-10 -rotate-2 text-2xl text-[var(--accent-text)]">pop a bubble, there's a tasting note in each</p>
         </Section>
 
         <Section id="projects" title="Projects" compact>
@@ -658,16 +667,16 @@ export default function App() {
                 <motion.div key={i} variants={item} layout className={`relative ${["-rotate-[1.2deg]", "ml-6 rotate-[0.8deg]", "-ml-2 -rotate-[0.4deg]"][i % 3]}`}>
                   {p.status && <Tape className="-top-3 right-10" rotate={9} width={70} />}
                   {p.status && (
-                    <div className="pointer-events-none absolute -top-9 left-40 z-10 hidden items-end gap-1 text-[var(--crema)] lg:flex">
+                    <div className="pointer-events-none absolute -top-9 left-40 z-10 hidden items-end gap-1 text-[var(--accent-text)] lg:flex">
                       <HandNote rotate={-5}>still roasting, don't peek</HandNote>
                       <HandArrow className="h-8 w-12 translate-y-3" rotate={110} />
                     </div>
                   )}
                   <Card className="relative overflow-hidden rounded-none">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex flex-wrap items-center gap-2">
+                      <CardTitle className="flex flex-wrap items-center gap-2 text-xl leading-tight">
                         {p.title}
-                        {p.status && <span className="border border-border px-2 py-0.5 font-display text-[10px] font-normal uppercase tracking-widest text-muted-foreground">{p.status}</span>}
+                        {p.status && <span className="border border-border px-2 py-0.5 font-mono text-[10px] font-normal uppercase tracking-widest text-muted-foreground">{p.status}</span>}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -699,7 +708,7 @@ export default function App() {
           </div>
         </Section>
 
-        <Section id="publication" title="Publication" tone="ink" wash={{ x: "85%", y: "50%" }}>
+        <Section id="publication" title="Publication" wash={{ x: "85%", y: "50%" }}>
           <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
             <Reveal>
               <Card>
@@ -711,7 +720,7 @@ export default function App() {
                       <div className="text-sm text-muted-foreground">{PROFILE.publication.authors}</div>
                       <p className="pt-2 text-sm text-muted-foreground">{PROFILE.publication.summary}</p>
                       <div className="pt-1">
-                        <a className="text-sm underline underline-offset-4" href={PROFILE.publication.link} target="_blank" rel="noreferrer">
+                        <a className="link-rest draw-underline inline-flex min-h-11 items-center text-sm sm:min-h-0" href={PROFILE.publication.link} target="_blank" rel="noreferrer">
                           Read the DOI
                           <span className="sr-only"> (opens in new tab)</span>
                         </a>
@@ -728,7 +737,7 @@ export default function App() {
         <Section id="education" title="Education" indent="right">
           <Reveal>
             <div className="relative" style={{ transform: "rotate(-1.5deg)" }}>
-              <CoffeeRing className="-right-6 -top-16" size={140} rotate={70} opacity={0.4} />
+              <CoffeeRing className="-right-16 -top-24" size={140} rotate={70} opacity={0.4} />
               <Card>
                 <CardContent className="py-6" style={{ transform: "rotate(1.5deg)" }}>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
@@ -746,12 +755,12 @@ export default function App() {
           </Reveal>
         </Section>
 
-        <Section id="skills" title="Skills" tone="ink" wash={{ x: "15%", y: "85%" }}>
+        <Section id="skills" title="Skills" wash={{ x: "15%", y: "85%" }}>
           <div className="grid md:grid-cols-3 gap-6 items-start">
             <Reveal>
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle className="text-lg">Technical</CardTitle>
+                  <CardTitle className="text-xl">Technical</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <motion.div className="flex flex-wrap gap-2" variants={stagger} initial={reduceMotion ? false : "hidden"} whileInView="show" viewport={{ once: true }}>
@@ -770,7 +779,7 @@ export default function App() {
                 <motion.div key={v.name} variants={item} layout>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{v.name}</CardTitle>
+                      <CardTitle className="text-lg">{v.name}</CardTitle>
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground">{v.desc}</CardContent>
                   </Card>
@@ -782,7 +791,7 @@ export default function App() {
 
         <Section id="about" title="About Me">
           <div className="flex flex-col items-start gap-8 sm:flex-row sm:items-center">
-            <div className="relative shrink-0 border border-border bg-paper p-1 pb-6 shadow-[6px_8px_0_rgb(0_0_0/0.08)]" style={{ transform: "rotate(4deg)" }}>
+            <div className="relative shrink-0 border border-border bg-milk p-1 pb-6 shadow-[6px_8px_0_rgb(20_14_11/0.14)]" style={{ transform: "rotate(4deg)" }}>
               <Tape className="-top-3 left-6" rotate={-12} width={70} />
               <img src={aboutPhoto} alt={`${PROFILE.name} outdoors`} className="h-40 w-40 object-cover sm:h-48 sm:w-48" />
             </div>
@@ -804,7 +813,7 @@ export default function App() {
           </div>
         </Section>
 
-        <Section id="contact" tone="ink" wash={{ x: "85%", y: "90%" }} labelledBy="contact-heading">
+        <Section id="contact" wash={{ x: "85%", y: "90%" }} labelledBy="contact-heading">
           <div className="relative">
             <AnimatePresence>
               {showFlourish && !reduceMotion && (
@@ -813,7 +822,7 @@ export default function App() {
                   animate={{ opacity: [0, 1, 1, 0], y: -22 }}
                   transition={{ duration: 1.8, times: [0, 0.2, 0.7, 1], ease: EASE }}
                   onAnimationComplete={() => setShowFlourish(false)}
-                  className="pointer-events-none absolute -top-10 left-0 text-paper/60"
+                  className="pointer-events-none absolute -top-10 left-0 text-muted-foreground"
                   aria-hidden="true"
                 >
                   <SteamShape w={0.6} />
@@ -821,15 +830,15 @@ export default function App() {
               )}
             </AnimatePresence>
             <div className="mb-3 flex items-center gap-3">
-              <p className="font-display text-[10px] uppercase tracking-widest text-muted-foreground">CONTACT</p>
-              <StepTag rotate={3} className="text-[var(--crema)]">{BREW.contact.step}</StepTag>
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">CONTACT</p>
+              <StepTag rotate={3} className="text-[var(--accent-text)]">{BREW.contact.step}</StepTag>
             </div>
-            <h2 id="contact-heading" className="max-w-xl font-display text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
+            <h2 id="contact-heading" className="max-w-2xl font-display text-4xl font-light leading-[1.02] tracking-[-0.02em] sm:text-6xl lg:text-7xl">
               Always open for the next pour.
             </h2>
             <p className="mt-4 max-w-md text-muted-foreground">{PROFILE.contactNote}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild className="bg-white text-black hover:bg-white/90">
+              <Button asChild>
                 <a href={`mailto:${PROFILE.email}`}>
                   <Mail className="h-4 w-4 mr-2" />
                   Email

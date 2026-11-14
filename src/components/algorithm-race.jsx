@@ -127,7 +127,7 @@ export function AlgorithmRace() {
 
   return (
     <div ref={containerRef} aria-hidden="true">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full text-ink">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full text-foreground">
         <defs>
           {ALGOS.map((a) => (
             <linearGradient key={a.key} id={`race-grad-${a.key}`} x1="0" y1="0" x2={w} y2={h} gradientUnits="userSpaceOnUse">
@@ -137,7 +137,7 @@ export function AlgorithmRace() {
           ))}
         </defs>
 
-        <g className="fill-current text-mist">
+        <g className="fill-current text-steam">
           {wallGrid.grid.map((open, i) =>
             open ? null : <rect key={i} x={i % w} y={Math.floor(i / w)} width={1} height={1} />
           )}

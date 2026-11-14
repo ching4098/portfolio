@@ -26,7 +26,7 @@ export function useDynamicFavicon() {
       ctx.clearRect(0, 0, SIZE, SIZE);
       const fillLine = progress * rows;
       for (const cell of cells) {
-        ctx.fillStyle = cell.y >= fillLine ? "#e0a05e" : "#4A4A4A";
+        ctx.fillStyle = cell.y >= fillLine ? "#C8955B" : "#6B4228";
         ctx.fillRect(cell.x * cellW, cell.y * cellH, Math.ceil(cellW), Math.ceil(cellH));
       }
       const newLink = document.createElement("link");
