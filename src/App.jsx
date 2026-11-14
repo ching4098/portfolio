@@ -22,7 +22,6 @@ import { GROUNDS, SECTION_ORDER, groundOf, nextGroundOf, groundVars } from "@/li
 import {
   ShotIntro,
   PourStream,
-  MilkRise,
   LatteRipple,
   SteamTrail,
   CremaCup,
@@ -242,7 +241,6 @@ const Section = ({ id, title, wash, indent, labelledBy, tabIndex, compact, child
       }}
     >
       {next && <SlantEdge color={next.bg} tilt={brew.tilt ?? -1} jag={brew.jag} />}
-      {id !== "home" && <MilkRise color={ground.rise} />}
       {brew.num && (
         <OutlineNumber rotate={brew.rot} dark={ground.dark} className={brew.pos}>
           {brew.num}
@@ -331,32 +329,22 @@ export default function App() {
   useEffect(() => setPulse((p) => p + 1), [active]);
   const [extracting, startExtraction] = useExtraction();
   const refill = () => {
-    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
-    if (!reduceMotion) setTimeout(() => setShowIntro(true), 450);
+    if (reduceMotion) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    // The shot intro covers the screen first, so the jump to the top is never seen.
+    setShowIntro(true);
+    setTimeout(() => window.scrollTo(0, 0), 120);
   };
 
-  useSectionPager(PAGER_IDS, { reduceMotion });
+  const goToSection = useSectionPager(PAGER_IDS, { reduceMotion });
 
   const scrollToSection = (id) => (e) => {
     e.preventDefault();
-    const el = document.getElementById(id);
-    if (!el) return;
-    const targetY = el.getBoundingClientRect().top + window.scrollY;
-    if (reduceMotion) {
-      window.scrollTo(0, targetY);
-      return;
-    }
-    const html = document.documentElement;
-    html.style.scrollSnapType = "none";
-    animate(window.scrollY, targetY, {
-      duration: 0.55,
-      ease: [0.22, 1, 0.36, 1],
-      onUpdate: (v) => window.scrollTo(0, v),
-      onComplete: () => {
-        html.style.scrollSnapType = "";
-      },
-    });
+    goToSection(id);
   };
+
 
   const heroRef = useRef(null);
   const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ["start end", "end start"] });
