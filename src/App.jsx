@@ -30,6 +30,9 @@ import {
   EmptyCup,
 } from "@/components/brew/motion-layer";
 import { useExtraction } from "@/hooks/use-extraction";
+import { useSectionPager } from "@/hooks/use-section-pager";
+
+const PAGER_IDS = ["home", "work", "what-i-do", "projects", "publication", "education", "skills", "about", "contact"];
 
 const Reveal = ({ delay = 0, y = 10, children }) => {
   const reduceMotion = usePrefersReducedMotion();
@@ -332,6 +335,8 @@ export default function App() {
     if (!reduceMotion) setTimeout(() => setShowIntro(true), 450);
   };
 
+  useSectionPager(PAGER_IDS, { reduceMotion });
+
   const scrollToSection = (id) => (e) => {
     e.preventDefault();
     const el = document.getElementById(id);
@@ -344,8 +349,8 @@ export default function App() {
     const html = document.documentElement;
     html.style.scrollSnapType = "none";
     animate(window.scrollY, targetY, {
-      duration: 0.5,
-      ease: EASE,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1],
       onUpdate: (v) => window.scrollTo(0, v),
       onComplete: () => {
         html.style.scrollSnapType = "";

@@ -125,7 +125,7 @@
     @apply border-border outline-ring/50;
   }
   html {
-    scroll-snap-type: y proximity;
+    scroll-snap-type: y mandatory;
     overflow-x: hidden;
   }
   body {
