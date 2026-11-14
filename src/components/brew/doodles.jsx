@@ -1,47 +1,42 @@
 // Hand-made marks that break the grid on purpose: coffee rings, tape, scribbles,
 // slanted section edges, and big outlined numbers at odd angles.
+// Rings, tape, notes, arrows and numbers are toys: drag them, click to spin.
+import { Toy } from "@/components/toy";
 
 export function CoffeeRing({ className = "", size = 160, rotate = 0, opacity = 0.18 }) {
+  const ring = "M100 14 C150 12 188 52 186 102 C184 150 146 188 98 186 C52 184 14 148 16 100 C18 60 46 22 92 15";
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 200 200"
-      className={`pointer-events-none absolute ${className}`}
-      style={{ width: size, height: size, transform: `rotate(${rotate}deg)`, opacity }}
-    >
-      <path
-        d="M100 14 C150 12 188 52 186 102 C184 150 146 188 98 186 C52 184 14 148 16 100 C18 60 46 22 92 15"
-        fill="none"
-        stroke="var(--mark)"
-        strokeWidth="7"
-        strokeLinecap="round"
-      />
-      <path
-        d="M100 26 C142 25 174 58 173 100 C172 140 140 173 100 172 C60 171 28 140 28 100"
-        fill="none"
-        stroke="var(--mark)"
-        strokeWidth="2"
-        opacity="0.6"
-      />
-      <path d="M160 160 C172 170 176 182 170 190" fill="none" stroke="var(--mark)" strokeWidth="4" strokeLinecap="round" />
-    </svg>
+    <Toy passThrough className={`absolute ${className}`} style={{ width: size, height: size }}>
+      <svg viewBox="0 0 200 200" className="h-full w-full" style={{ transform: `rotate(${rotate}deg)`, opacity }}>
+        <path d={ring} fill="none" stroke="var(--mark)" strokeWidth="7" strokeLinecap="round" />
+        <path
+          d="M100 26 C142 25 174 58 173 100 C172 140 140 173 100 172 C60 171 28 140 28 100"
+          fill="none"
+          stroke="var(--mark)"
+          strokeWidth="2"
+          opacity="0.6"
+        />
+        <path d="M160 160 C172 170 176 182 170 190" fill="none" stroke="var(--mark)" strokeWidth="4" strokeLinecap="round" />
+        <path d={ring} className="toy-hit" fill="none" stroke="transparent" strokeWidth="26" style={{ pointerEvents: "stroke" }} />
+      </svg>
+    </Toy>
   );
 }
 
 export function Tape({ className = "", rotate = -8, width = 92 }) {
   return (
-    <span
-      aria-hidden="true"
-      className={`pointer-events-none absolute z-10 h-6 ${className}`}
-      style={{
-        width,
-        transform: `rotate(${rotate}deg)`,
-        background:
-          "repeating-linear-gradient(90deg, color-mix(in srgb, var(--tape) 55%, transparent) 0 6px, color-mix(in srgb, var(--tape) 42%, transparent) 6px 9px)",
-        clipPath: "polygon(3% 0, 97% 6%, 100% 50%, 96% 100%, 2% 94%, 0 45%)",
-        boxShadow: "0 1px 0 rgb(20 14 11 / 0.12)",
-      }}
-    />
+    <Toy className={`absolute z-10 h-6 ${className}`} style={{ width }}>
+      <span
+        className="block h-6 w-full"
+        style={{
+          transform: `rotate(${rotate}deg)`,
+          background:
+            "repeating-linear-gradient(90deg, color-mix(in srgb, var(--tape) 55%, transparent) 0 6px, color-mix(in srgb, var(--tape) 42%, transparent) 6px 9px)",
+          clipPath: "polygon(3% 0, 97% 6%, 100% 50%, 96% 100%, 2% 94%, 0 45%)",
+          boxShadow: "0 1px 0 rgb(20 14 11 / 0.12)",
+        }}
+      />
+    </Toy>
   );
 }
 
@@ -66,18 +61,22 @@ export function Scribble({ className = "", width = 180, rotate = 0 }) {
 
 export function HandArrow({ className = "", rotate = 0 }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 120 80" className={`pointer-events-none ${className}`} style={{ transform: `rotate(${rotate}deg)` }}>
-      <path d="M6 70 C28 30 62 18 104 22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M90 10 L106 22 L92 36" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <Toy className={className}>
+      <svg viewBox="0 0 120 80" className="h-full w-full" style={{ transform: `rotate(${rotate}deg)` }}>
+        <path d="M6 70 C28 30 62 18 104 22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M90 10 L106 22 L92 36" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </Toy>
   );
 }
 
 export function HandNote({ children, className = "", rotate = -4 }) {
   return (
-    <span className={`font-hand pointer-events-none select-none text-2xl leading-none ${className}`} style={{ transform: `rotate(${rotate}deg)`, display: "inline-block" }}>
-      {children}
-    </span>
+    <Toy className="inline-block">
+      <span className={`font-hand block text-2xl leading-none ${className}`} style={{ transform: `rotate(${rotate}deg)` }}>
+        {children}
+      </span>
+    </Toy>
   );
 }
 
@@ -101,17 +100,18 @@ export function SlantEdge({ color, tilt = 1, jag = false }) {
 
 export function OutlineNumber({ children, className = "", rotate = 0, dark = false }) {
   return (
-    <div
-      aria-hidden="true"
-      className={`pointer-events-none absolute select-none font-display font-semibold leading-none ${className}`}
-      style={{
-        transform: `rotate(${rotate}deg)`,
-        color: "transparent",
-        WebkitTextStroke: `1.5px ${dark ? "rgb(244 238 230 / 0.22)" : "rgb(20 14 11 / 0.16)"}`,
-      }}
-    >
-      {children}
-    </div>
+    <Toy className={`absolute ${className}`}>
+      <div
+        className="font-display font-semibold leading-none"
+        style={{
+          transform: `rotate(${rotate}deg)`,
+          color: "transparent",
+          WebkitTextStroke: `1.5px ${dark ? "rgb(244 238 230 / 0.22)" : "rgb(20 14 11 / 0.16)"}`,
+        }}
+      >
+        {children}
+      </div>
+    </Toy>
   );
 }
 

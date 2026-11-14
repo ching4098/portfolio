@@ -1,6 +1,8 @@
-import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { animate, motion, useMotionValue } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { BAYER_4X4 } from "@/lib/dither-pattern";
+import { useToyGestures, DRAG_FEEL } from "@/hooks/use-toy-gestures";
 
 const SECTION_ORDER = ["home", "work", "what-i-do", "projects", "publication", "education", "skills", "about", "contact"];
 const TYPES = ["line", "ring", "steam", "angle", "dither", "line", "ring", "steam", "angle", "dither", "line", "ring"];
@@ -13,8 +15,8 @@ function hash(seed) {
 function targetFor(sectionId, shapeIndex) {
   const s = Math.max(SECTION_ORDER.indexOf(sectionId), 0);
   const base = shapeIndex * 91.7 + s * 233.1;
-  const x = `${(hash(base + 1) * 88 + 4).toFixed(1)}vw`;
-  const y = `${(hash(base + 2) * 86 + 5).toFixed(1)}vh`;
+  const x = hash(base + 1) * 88 + 4;
+  const y = hash(base + 2) * 86 + 5;
   const rotate = hash(base + 3) * 360 - 180;
   const scale = 0.35 + hash(base + 4) * 2;
   return { x, y, rotate, scale };
@@ -89,28 +91,76 @@ function DitherShape({ className, w, seed }) {
 
 const RENDERERS = { line: LineShape, ring: RingShape, steam: SteamShape, angle: AngleShape, dither: DitherShape };
 
-export function BackgroundShapes({ active, dark = false }) {
-  const reduceMotion = usePrefersReducedMotion();
-  const colorClass = dark ? "text-milk" : "text-espresso";
+function Shape({ index, type, active, dark, reduceMotion }) {
+  const { x, y, rotate, scale } = targetFor(active, index);
+  const { w, opacity: baseOpacity } = weightFor(index);
+  const opacity = dark ? baseOpacity : baseOpacity * 0.55;
+  const Render = RENDERERS[type];
+  const g = useToyGestures(reduceMotion);
+  // The visitor's offset lives here and is never reset: it adds to wherever the section sends the shape.
+  const ox = useMotionValue(0);
+  const oy = useMotionValue(0);
+
+  // A new section may leave a moved shape past the edge of the screen; ease it back just far enough.
+  useEffect(() => {
+    const px = (x / 100) * window.innerWidth;
+    const py = (y / 100) * window.innerHeight;
+    const nx = Math.min(Math.max(ox.get(), -px + 12), window.innerWidth - px - 60);
+    const ny = Math.min(Math.max(oy.get(), -py + 12), window.innerHeight - py - 60);
+    if (nx !== ox.get()) animate(ox, nx, { type: "spring", stiffness: 120, damping: 18 });
+    if (ny !== oy.get()) animate(oy, ny, { type: "spring", stiffness: 120, damping: 18 });
+  }, [x, y, ox, oy]);
+
+  const constraints = () => ({
+    left: -((x / 100) * window.innerWidth) + 8,
+    right: window.innerWidth - (x / 100) * window.innerWidth - 40,
+    top: -((y / 100) * window.innerHeight) + 8,
+    bottom: window.innerHeight - (y / 100) * window.innerHeight - 40,
+  });
+  const c = typeof window === "undefined" ? undefined : constraints();
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-10 hidden lg:block" aria-hidden="true">
-      {TYPES.map((type, i) => {
-        const { x, y, rotate, scale } = targetFor(active, i);
-        const { w, opacity: baseOpacity } = weightFor(i);
-        const opacity = dark ? baseOpacity : baseOpacity * 0.55;
-        const Render = RENDERERS[type];
-        return (
-          <motion.div
-            key={i}
-            className="absolute left-0 top-0"
-            animate={reduceMotion ? { x, y, opacity } : { x, y, rotate, scale, opacity }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <Render className={colorClass} w={w} seed={i} />
-          </motion.div>
-        );
-      })}
+    <motion.div
+      className="absolute left-0 top-0"
+      drag
+      dragMomentum
+      dragElastic={0.18}
+      dragTransition={DRAG_FEEL}
+      dragConstraints={c}
+      style={{ x: ox, y: oy }}
+    >
+      <motion.div
+        className="absolute left-0 top-0"
+        animate={
+          reduceMotion
+            ? { x: `${x}vw`, y: `${y}vh`, opacity }
+            : { x: `${x}vw`, y: `${y}vh`, rotate, scale, opacity }
+        }
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <motion.div
+          className="toy pointer-events-auto relative"
+          whileHover={{ scale: 1.18 }}
+          whileDrag={{ scale: 1.25 }}
+          onPointerDown={g.onPointerDown}
+          onClick={g.onClick}
+          style={{ rotate: g.rot, scaleX: g.flip }}
+        >
+          {type === "line" && <span className="absolute -inset-y-2.5 inset-x-0" />}
+          <Render className={dark ? "text-milk" : "text-espresso"} w={w} seed={index} />
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+export function BackgroundShapes({ active, dark = false }) {
+  const reduceMotion = usePrefersReducedMotion();
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[25] hidden lg:block" aria-hidden="true">
+      {TYPES.map((type, i) => (
+        <Shape key={i} index={i} type={type} active={active} dark={dark} reduceMotion={reduceMotion} />
+      ))}
     </div>
   );
 }

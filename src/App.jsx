@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, MotionConfig, AnimatePresence, useScroll, useTransform, animate } from "framer-motion";
+import { motion, MotionConfig, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
 import aboutPhoto from "@/assets/about-photo.png";
 import { Mail, Github, Linkedin, FileDown, School, BookOpen, Menu, X } from "lucide-react";
 import resumePdf from "../public/Resume.pdf";
-import { CoffeeRing, Tape, HandArrow, HandNote, SlantEdge, OutlineNumber, StepTag, SteamCup } from "@/components/brew/doodles";
+import { CoffeeRing, Tape, HandArrow, HandNote, SlantEdge, OutlineNumber, StepTag } from "@/components/brew/doodles";
 import { GROUNDS, SECTION_ORDER, groundOf, nextGroundOf, groundVars } from "@/lib/grounds";
 import {
   ShotIntro,
@@ -28,6 +28,7 @@ import {
   FoamBubbles,
   EmptyCup,
 } from "@/components/brew/motion-layer";
+import { CoffeeToys } from "@/components/brew/coffee-cup";
 import { useExtraction } from "@/hooks/use-extraction";
 import { useSectionPager } from "@/hooks/use-section-pager";
 
@@ -414,6 +415,7 @@ export default function App() {
         <SteamTrail />
         <ScrollProgressGauge dark={activeGround.dark} />
         <BackgroundShapes active={active} dark={activeGround.dark} />
+        <CoffeeToys dark={activeGround.dark} />
 
         <header
           className="sticky top-0 z-30 border-b border-border bg-[color-mix(in_srgb,var(--background)_92%,transparent)] text-foreground backdrop-blur transition-[background-color,color,border-color] duration-500"
@@ -591,7 +593,6 @@ export default function App() {
               </div>
             </div>
           </motion.div>
-          <SteamCup className="right-3 top-28 z-10 w-20 sm:bottom-24 sm:right-1 sm:top-auto sm:w-32 lg:bottom-14 lg:right-[1.5%] lg:w-44" rotate={-8} />
         </Section>
 
         <Section id="work" title="Experience" indent="left" compact>

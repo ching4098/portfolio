@@ -102,9 +102,13 @@ export function useSectionPager(ids, { reduceMotion } = {}) {
     const step = (dir) => {
       if (busy.current) return;
       if (roomInside(dir)) {
+        // Step through a tall section in screen-sized moves that stop exactly on its edge.
+        const rect = sections()[currentIndex()].getBoundingClientRect();
+        const max = window.innerHeight * 0.85;
+        const delta = dir > 0 ? Math.min(rect.bottom - window.innerHeight, max) : Math.max(rect.top, -max);
         busy.current = true;
-        window.scrollBy({ top: dir * window.innerHeight * 0.75, behavior: reduceMotion ? "auto" : "smooth" });
-        setTimeout(() => (busy.current = false), 350);
+        window.scrollBy({ top: delta, behavior: reduceMotion ? "auto" : "smooth" });
+        setTimeout(() => (busy.current = false), 420);
         return;
       }
       goTo(currentIndex() + dir);
@@ -122,6 +126,8 @@ export function useSectionPager(ids, { reduceMotion } = {}) {
     };
 
     const onKey = (e) => {
+      // A focused toy (the cup) may have used the key already.
+      if (e.defaultPrevented) return;
       const a = document.activeElement;
       if (a && (["INPUT", "TEXTAREA", "SELECT"].includes(a.tagName) || a.isContentEditable)) return;
       let dir = 0;

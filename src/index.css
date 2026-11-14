@@ -204,3 +204,51 @@
   .wisp { animation: none; opacity: 0.8; transform: none; }
   .lift:hover { transform: none; }
 }
+
+/* Toys: shapes and doodles you can pick up. */
+.toy,
+.toy-hit {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+.toy:active,
+.toy-hit:active {
+  cursor: grabbing;
+}
+
+/* The empty cup rocks on its base every few seconds. */
+@keyframes cup-wobble {
+  0%, 82%, 100% { transform: rotate(0deg); }
+  86% { transform: rotate(-4deg); }
+  90% { transform: rotate(3.5deg); }
+  94% { transform: rotate(-2deg); }
+  97% { transform: rotate(1deg); }
+}
+.cup-wobble {
+  animation: cup-wobble 4.6s ease-in-out infinite;
+  transform-origin: 50% 92%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cup-wobble { animation: none; }
+}
+
+/* Coffee cursors: a bean to point, a cup on links, a bean in a ring to grab. Fine pointers only. */
+@media (pointer: fine) {
+  html, body {
+    cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cg%20transform%3D%22rotate%28-35%2014%2014%29%22%3E%3Cellipse%20cx%3D%2214%22%20cy%3D%2214%22%20rx%3D%228%22%20ry%3D%2211%22%20fill%3D%22%233A2418%22%20stroke%3D%22%23F4EEE6%22%20stroke-width%3D%221.6%22/%3E%3Cpath%20d%3D%22M14%204.5%20C10.5%209%2017.5%2015%2013.5%2023.5%22%20fill%3D%22none%22%20stroke%3D%22%23C8955B%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22/%3E%3C/g%3E%3C/svg%3E") 6 5, auto;
+  }
+  a, button, [role="button"], summary, label[for] {
+    cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cg%20transform%3D%22rotate%28-28%2016%2016%29%22%3E%3Cpath%20d%3D%22M7%2011%20L23%2011%20L21.5%2025%20Q21%2027%2019%2027%20L11%2027%20Q9%2027%208.5%2025%20Z%22%20fill%3D%22%23B07A4C%22%20stroke%3D%22%23140E0B%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpath%20d%3D%22M23%2014%20Q28%2014%2028%2018%20Q28%2022%2022%2022%22%20fill%3D%22none%22%20stroke%3D%22%23140E0B%22%20stroke-width%3D%221.6%22/%3E%3Cellipse%20cx%3D%2215%22%20cy%3D%2211%22%20rx%3D%228%22%20ry%3D%221.8%22%20fill%3D%22%233A2418%22%20stroke%3D%22%23140E0B%22%20stroke-width%3D%221.2%22/%3E%3C/g%3E%3Ccircle%20cx%3D%224%22%20cy%3D%224%22%20r%3D%222.4%22%20fill%3D%22%23C8955B%22%20stroke%3D%22%23140E0B%22%20stroke-width%3D%221%22/%3E%3C/svg%3E") 4 4, pointer;
+  }
+  .toy, .toy-hit, [data-toy] {
+    cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2216%22%20r%3D%2212%22%20fill%3D%22none%22%20stroke%3D%22%23C8955B%22%20stroke-width%3D%221.4%22%20stroke-dasharray%3D%223%203%22/%3E%3Cg%20transform%3D%22rotate%28-35%2016%2016%29%22%3E%3Cellipse%20cx%3D%2216%22%20cy%3D%2216%22%20rx%3D%226%22%20ry%3D%228.5%22%20fill%3D%22%233A2418%22%20stroke%3D%22%23F4EEE6%22%20stroke-width%3D%221.5%22/%3E%3Cpath%20d%3D%22M16%208.5%20C13.5%2012%2018.5%2016.5%2015.5%2023%22%20fill%3D%22none%22%20stroke%3D%22%23C8955B%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22/%3E%3C/g%3E%3C/svg%3E") 16 16, grab !important;
+  }
+  .toy:active, .toy-hit:active, [data-toy]:active {
+    cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2216%22%20r%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23C8955B%22%20stroke-width%3D%222%22/%3E%3Cg%20transform%3D%22rotate%28-35%2016%2016%29%22%3E%3Cellipse%20cx%3D%2216%22%20cy%3D%2216%22%20rx%3D%227.5%22%20ry%3D%226%22%20fill%3D%22%233A2418%22%20stroke%3D%22%23F4EEE6%22%20stroke-width%3D%221.5%22/%3E%3Cpath%20d%3D%22M9.5%2016%20C13%2013.5%2019%2018.5%2022.5%2016%22%20fill%3D%22none%22%20stroke%3D%22%23C8955B%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22/%3E%3C/g%3E%3C/svg%3E") 16 16, grabbing !important;
+  }
+  input, textarea, [contenteditable="true"] {
+    cursor: text;
+  }
+}
