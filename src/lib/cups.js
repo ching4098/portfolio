@@ -5,11 +5,15 @@
 //  lipW      effective width of the spill, in units (rim width, or the sip hole)
 //  flowK     weir coefficient; headMax caps the head for cups that restrict flow (lids)
 //  mouth     where the moka pot aims; stream "open" ends on the surface, "lid" at the hole
+//  scale/mass/col  size and weight of the toy and its capsule collider (cup units: centre, half-segment, radius)
+//  pot       which refill device comes for this cup;  pour = stream outline / fill / droplet colours
+//  open      overrides when the lid is off
 //  drink     gradient (world-vertical, stops from local y0 to y1), surface line, crema band
 
 export const CUPS = [
   {
     id: "espresso",
+    scale: 0.82, mass: 1, pot: "moka", col: { c: [86, 124], h: [24, 0], r: 30 }, pour: ["#2A1A12", "#6B4228", "#7A4A2B"],
     name: "Espresso",
     origin: [85, 122],
     cavity: "M58 94 L112 94 C112 118 104 140 85 141 C66 140 58 118 58 94 Z",
@@ -30,6 +34,7 @@ export const CUPS = [
   },
   {
     id: "flat-white",
+    scale: 0.98, mass: 1.5, pot: "pitcher", col: { c: [88, 118], h: [34, 0], r: 36 }, pour: ["#B07A4C", "#E9D9C4", "#C8955B"],
     name: "Flat white",
     origin: [85, 112],
     cavity: "M38 84 C30 98 40 132 85 138 C130 132 140 98 132 84 Z",
@@ -51,6 +56,7 @@ export const CUPS = [
   },
   {
     id: "latte-glass",
+    scale: 1.08, mass: 1.7, pot: "kettle", col: { c: [85, 95], h: [0, 28], r: 30 }, pour: ["#6B4228", "#C8955B", "#B07A4C"],
     name: "Latte",
     origin: [85, 96],
     cavity: "M59 42 L111 42 L107 142 L63 142 Z",
@@ -78,6 +84,9 @@ export const CUPS = [
   },
   {
     id: "paper-cup",
+    scale: 1, mass: 1.4, pot: "urn", col: { c: [85, 96], h: [0, 16], r: 40 }, pour: ["#3A2418", "#8C735F", "#6B4228"],
+    dumpRate: 0.45,
+    open: { lips: [{ p: [50, 54], out: [-1, 0] }, { p: [120, 54], out: [1, 0] }], lipW: 70, headMax: Infinity, mouth: [85, 54], spread: 14, stream: "open", dumpRate: 4.2 },
     name: "Takeaway coffee",
     origin: [85, 100],
     cavity: "M50 54 L120 54 L109 146 L61 146 Z",
@@ -98,6 +107,7 @@ export const CUPS = [
   },
   {
     id: "diner-mug",
+    scale: 1.05, mass: 2.2, pot: "carafe", col: { c: [86, 105], h: [10, 0], r: 47 }, pour: ["#4A2E1E", "#8C735F", "#4A2E1E"],
     name: "Americano",
     origin: [85, 106],
     cavity: "M51 62 L111 62 L111 138 C111 143 51 143 51 138 Z",

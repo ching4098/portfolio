@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { animate, motion, useMotionValue } from "framer-motion";
+import { world } from "@/lib/world";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { BAYER_4X4 } from "@/lib/dither-pattern";
 import { useToyGestures, DRAG_FEEL } from "@/hooks/use-toy-gestures";
@@ -55,7 +56,7 @@ export function SteamShape({ className, w }) {
 function AngleShape({ className, w }) {
   const size = 48 + w * 28;
   return (
-    <svg viewBox="0 0 80 80" className={className} style={{ width: size, height: size }}>
+    <svg viewBox="0 0 44 80" className={className} style={{ width: size * 0.55, height: size }}>
       <path d="M4,4 L40,40 L4,76" fill="none" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
@@ -91,73 +92,193 @@ function DitherShape({ className, w, seed }) {
 
 const RENDERERS = { line: LineShape, ring: RingShape, steam: SteamShape, angle: AngleShape, dither: DitherShape };
 
+// Box size and capsule collider (half segment + radius, before the section's scale) of every shape.
+function dimsOf(type, w) {
+  switch (type) {
+    case "line": {
+      const len = 56 + w * 96;
+      return { w: len, h: w > 0.5 ? 1.5 : 1, hx: len / 2 - 4, hy: 0, r: 4 };
+    }
+    case "ring": {
+      const o = 42 + w * 34;
+      return { w: o, h: o, hx: 0, hy: 0, r: o / 2 };
+    }
+    case "steam": {
+      const size = 52 + w * 24;
+      const wd = size * 0.62;
+      return { w: wd, h: size, hx: 0, hy: size / 2 - wd * 0.4, r: wd * 0.4 };
+    }
+    case "angle": {
+      const size = 48 + w * 28;
+      return { w: size * 0.55, h: size, hx: 0, hy: size * 0.16, r: size * 0.2 };
+    }
+    default: {
+      const cell = 4 + w * 2;
+      return { w: cell * 6, h: cell * 6, hx: 0, hy: 0, r: cell * 2.7 };
+    }
+  }
+}
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const RAD = Math.PI / 180;
+
 function Shape({ index, type, active, dark, reduceMotion }) {
   const { x, y, rotate, scale } = targetFor(active, index);
   const { w, opacity: baseOpacity } = weightFor(index);
   const opacity = dark ? baseOpacity : baseOpacity * 0.55;
   const Render = RENDERERS[type];
   const g = useToyGestures(reduceMotion);
-  // The visitor's offset lives here and is never reset: it adds to wherever the section sends the shape.
-  const ox = useMotionValue(0);
-  const oy = useMotionValue(0);
+  const dims = dimsOf(type, w);
+  const px = useMotionValue(0);
+  const py = useMotionValue(0);
+  const squash = useMotionValue(1);
+  const bodyRef = useRef(null);
+  const prev = useRef(null);
+  const reduceRef = useRef(reduceMotion);
+  reduceRef.current = reduceMotion;
 
-  // A new section may leave a moved shape past the edge of the screen; ease it back just far enough.
+  // The shape is a body in the shared physics world: the section only moves its goal.
   useEffect(() => {
-    const px = (x / 100) * window.innerWidth;
-    const py = (y / 100) * window.innerHeight;
-    const nx = Math.min(Math.max(ox.get(), -px + 12), window.innerWidth - px - 60);
-    const ny = Math.min(Math.max(oy.get(), -py + 12), window.innerHeight - py - 60);
-    if (nx !== ox.get()) animate(ox, nx, { type: "spring", stiffness: 120, damping: 18 });
-    if (ny !== oy.get()) animate(oy, ny, { type: "spring", stiffness: 120, damping: 18 });
-  }, [x, y, ox, oy]);
+    const t = targetFor(active, index);
+    const center = (tt) => [(tt.x / 100) * window.innerWidth + dims.w / 2, (tt.y / 100) * window.innerHeight + dims.h / 2];
+    const [cx, cy] = center(t);
+    const r0 = dims.r * t.scale;
+    const b = {
+      kind: "shape",
+      x: cx,
+      y: cy,
+      hx: dims.hx * t.scale,
+      hy: dims.hy * t.scale,
+      hxT: dims.hx * t.scale,
+      hyT: dims.hy * t.scale,
+      r: r0,
+      rT: r0,
+      ang: t.rotate * RAD,
+      angT: t.rotate * RAD,
+      mass: clamp(0.1 + (r0 * r0) / 12000, 0.08, 0.6),
+      damp: 2.2,
+      bounds: () => {
+        const c = Math.cos(b.angT);
+        const s = Math.sin(b.angT);
+        const ex = Math.abs(b.hxT * c) + Math.abs(b.hyT * s) + b.rT;
+        const ey = Math.abs(b.hxT * s) + Math.abs(b.hyT * c) + b.rT;
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        return { l: Math.min(8 + ex, W / 2), r: Math.max(W - 8 - ex, W / 2), t: Math.min(8 + ey, H / 2), b: Math.max(H - 8 - ey, H / 2) };
+      },
+      sync: () => {
+        px.set(b.x - dims.w / 2);
+        py.set(b.y - dims.h / 2);
+      },
+      hit: ({ speed }) => {
+        if (reduceRef.current) return;
+        squash.set(1 - 0.06 * clamp(speed / 1500, 0.15, 1));
+        animate(squash, 1, { type: "spring", stiffness: 330, damping: 7 });
+      },
+    };
+    bodyRef.current = b;
+    prev.current = { t, ox: 0, oy: 0 };
+    b.sync();
+    const remove = world.add(b);
+    return remove;
+    // The body is created once per shape; section changes steer it through its goal below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const constraints = () => ({
-    left: -((x / 100) * window.innerWidth) + 8,
-    right: window.innerWidth - (x / 100) * window.innerWidth - 40,
-    top: -((y / 100) * window.innerHeight) + 8,
-    bottom: window.innerHeight - (y / 100) * window.innerHeight - 40,
-  });
-  const c = typeof window === "undefined" ? undefined : constraints();
+  // New section: keep the visitor's offset, aim at the new target, and let physics get it there.
+  useEffect(() => {
+    const b = bodyRef.current;
+    const p = prev.current;
+    if (!b || !p) return;
+    const center = (tt) => [(tt.x / 100) * window.innerWidth + dims.w / 2, (tt.y / 100) * window.innerHeight + dims.h / 2];
+    const t = { x, y, rotate, scale };
+    const [pcx, pcy] = center(p.t);
+    const offx = b.x - pcx;
+    const offy = b.y - pcy;
+    const [ncx, ncy] = center(t);
+    p.t = t;
+    b.hxT = dims.hx * scale;
+    b.hyT = dims.hy * scale;
+    b.rT = dims.r * scale;
+    b.angT = rotate * RAD;
+    b.mass = clamp(0.1 + (b.rT * b.rT) / 12000, 0.08, 0.6);
+    b.invMass = 1 / b.mass;
+    const B = b.bounds();
+    b.goal = { x: clamp(ncx + offx, B.l, B.r), y: clamp(ncy + offy, B.t, B.b) };
+    if (reduceRef.current) {
+      b.r = b.rT;
+      b.hx = b.hxT;
+      b.hy = b.hyT;
+      b.ang = b.angT;
+    }
+    world.wake();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, x, y, rotate, scale]);
+
+  useEffect(() => {
+    const onResize = () => {
+      const b = bodyRef.current;
+      if (!b) return;
+      const B = b.bounds();
+      b.x = clamp(b.x, B.l, B.r);
+      b.y = clamp(b.y, B.t, B.b);
+      b.sync();
+      world.needsRelax = true;
+      world.wake();
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   return (
-    <motion.div
-      className="absolute left-0 top-0"
-      drag
-      dragMomentum
-      dragElastic={0.18}
-      dragTransition={DRAG_FEEL}
-      dragConstraints={c}
-      style={{ x: ox, y: oy }}
-    >
+    <motion.div className="absolute left-0 top-0" style={{ x: px, y: py }}>
       <motion.div
         className="absolute left-0 top-0"
-        animate={
-          reduceMotion
-            ? { x: `${x}vw`, y: `${y}vh`, opacity }
-            : { x: `${x}vw`, y: `${y}vh`, rotate, scale, opacity }
-        }
+        animate={reduceMotion ? { opacity } : { rotate, scale, opacity }}
         transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
       >
-        <motion.div
-          className="toy pointer-events-auto relative"
-          whileHover={{ scale: 1.18 }}
-          whileDrag={{ scale: 1.25 }}
-          onPointerDown={g.onPointerDown}
-          onClick={g.onClick}
-          style={{ rotate: g.rot, scaleX: g.flip }}
-        >
-          {type === "line" && <span className="absolute -inset-y-2.5 inset-x-0" />}
-          <Render className={dark ? "text-milk" : "text-espresso"} w={w} seed={index} />
+        <motion.div style={{ scale: squash }}>
+          <motion.div
+            className="toy pointer-events-auto relative"
+            whileHover={{ scale: 1.18 }}
+            whileDrag={{ scale: 1.25 }}
+            onPointerDown={(e) => {
+              g.onPointerDown(e);
+              if (e.button > 0 || !bodyRef.current) return;
+              world.startDrag(bodyRef.current, e);
+            }}
+            onClick={g.onClick}
+            style={{ rotate: g.rot, scaleX: g.flip, touchAction: "none" }}
+          >
+            {type === "line" && <span className="absolute -inset-y-2.5 inset-x-0" />}
+            <Render className={dark ? "text-milk" : "text-espresso"} w={w} seed={index} />
+          </motion.div>
         </motion.div>
       </motion.div>
     </motion.div>
   );
 }
 
+function useWide() {
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const on = () => setWide(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
+
 export function BackgroundShapes({ active, dark = false }) {
   const reduceMotion = usePrefersReducedMotion();
+  const wide = useWide();
+  useEffect(() => {
+    world.reduce = reduceMotion;
+  }, [reduceMotion]);
+  if (!wide) return null;
   return (
-    <div className="pointer-events-none fixed inset-0 z-[25] hidden lg:block" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 z-[25]" aria-hidden="true">
       {TYPES.map((type, i) => (
         <Shape key={i} index={i} type={type} active={active} dark={dark} reduceMotion={reduceMotion} />
       ))}

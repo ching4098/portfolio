@@ -96,9 +96,11 @@ function solveSurface(poly, nx, ny, want) {
 const compiled = new Map();
 
 // Everything the physics needs about one cup, computed once.
-export function geomOf(id) {
-  if (compiled.has(id)) return compiled.get(id);
-  const def = CUPS.find((c) => c.id === id) || CUPS[0];
+export function geomOf(id, open = false) {
+  const key = open ? `${id}:open` : id;
+  if (compiled.has(key)) return compiled.get(key);
+  const base = CUPS.find((c) => c.id === id) || CUPS[0];
+  const def = open && base.open ? { ...base, ...base.open } : base;
   const poly = parseCavity(def.cavity);
   const total = area(poly);
   const volA = total * def.fullFrac; // area that "level 1" stands for
@@ -134,10 +136,11 @@ export function geomOf(id) {
     lips,
     lipW: def.lipW,
     flowK: def.flowK,
+    dumpRate: def.dumpRate ?? 4.2,
     headMax: def.headMax ?? Infinity,
     cache: { key: "", val: { fill: "", surface: "" } },
   };
-  compiled.set(id, g);
+  compiled.set(key, g);
   return g;
 }
 

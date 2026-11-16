@@ -1,16 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { animate, motion, useDragControls, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { animate, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import { CUP_VB, geomOf, levelY, liquidPaths, lowLip } from "@/lib/cup-geometry";
+import { CUP_VB, geomOf, levelY, liquidPaths, lowLip, worldPoint } from "@/lib/cup-geometry";
 import { CUPS } from "@/lib/cups";
 import { pourStep } from "@/lib/pour-physics";
 import { G, Spill } from "@/lib/spill";
+import { world } from "@/lib/world";
 import { Brewer } from "@/components/brew/brewer";
-import { CupArt, LatteHeart } from "@/components/brew/cup-art";
+import { CupArt, CupLid, LatteHeart } from "@/components/brew/cup-art";
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const DROP_COUNT = 40;
-const STAIN_COUNT = 14;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const DROP_COUNT = 60;
+const STAIN_COUNT = 20;
 const SLOSH_W = 13; // rad/s, natural frequency of the surface wobble
 const SLOSH_Z = 0.2; // damping ratio
 const WISPS = [
@@ -19,91 +21,214 @@ const WISPS = [
   { d: "M108 66 C101 56 116 48 110 38 C107 33 111 30 110 24", delay: "2.1s" },
 ];
 
-function cupSizeFor(w) {
-  return w >= 1024 ? 176 : w >= 640 ? 128 : 88;
-}
+const tierFor = (w) => (w >= 1024 ? "lg" : w >= 640 ? "md" : "sm");
+const shuffle = (a) => {
+  const r = [...a];
+  for (let i = r.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [r[i], r[j]] = [r[j], r[i]];
+  }
+  return r;
+};
 
-function startPose(size) {
+// Where each cup spawns: random every load, hugging the side margins so the text stays clear.
+// lg: all five, split over the left and right margins in vertical slots (so none overlap).
+// md: three in the corners / edge, sm: two in the bottom corners.
+function planCups(tier) {
   const W = window.innerWidth;
   const H = window.innerHeight;
-  return { x: W - size - Math.max(12, W * 0.015), y: H - size - (W >= 1024 ? 72 : 76) };
+  const n = tier === "lg" ? 5 : tier === "md" ? 3 : 2;
+  const base = tier === "lg" ? clamp(W * 0.086, 104, 150) : tier === "md" ? 128 : 88;
+  const hs = tier === "lg" ? clamp(H / 850, 0.7, 1) : 1;
+  const picks = shuffle(CUPS).slice(0, n);
+  const items = picks.map((def) => ({ def, size: Math.round(base * def.scale * hs), angle: rnd(-6, 6) }));
+  const out = [];
+  const put = (it, left, top) => out.push({ ...it, left: clamp(left, 0, W - it.size), top: clamp(top, 0, H - it.size - 44) });
+
+  if (tier === "lg") {
+    const edge = Math.max(0, (W - 1216) / 2);
+    const leftN = Math.random() < 0.5 ? 2 : 3;
+    const sides = [items.slice(0, leftN), items.slice(leftN)];
+    sides.forEach((side, si) => {
+      const top = 64;
+      const bottom = H - 44;
+      let total = side.reduce((a, it) => a + it.size, 0);
+      const room = bottom - top - 8 * side.length;
+      if (total > room) {
+        const f = room / total;
+        side.forEach((it) => (it.size = Math.round(it.size * f)));
+        total = side.reduce((a, it) => a + it.size, 0);
+      }
+      const free = Math.max(0, bottom - top - total);
+      const w = Array.from({ length: side.length + 1 }, () => rnd(0.25, 1));
+      const ws = w.reduce((a, b) => a + b, 0);
+      let y = top;
+      side.forEach((it, i) => {
+        y += (free * w[i]) / ws;
+        // Hug the margin: the cup's body (not its empty box) sits left of / right of the text column.
+        const kk = it.size / CUP_VB.w;
+        const ex = (it.def.col.h[0] + it.def.col.r) * kk;
+        const colL = it.def.col.c[0] * kk - ex;
+        const colR = it.def.col.c[0] * kk + ex;
+        const room = Math.max(2, si === 0 ? Math.min(edge - 2 * ex - 6, edge + colL - it.size) : edge - 2 * ex - 6);
+        const gap = rnd(6, Math.max(6, room));
+        out.push({ ...it, left: si === 0 ? gap - colL : W - gap - colR, top: clamp(y, 0, H - it.size - 44) });
+        y += it.size;
+      });
+    });
+  } else if (tier === "md") {
+    const m = Math.max(12, W * 0.015);
+    const by = H - 76;
+    put(items[0], W - items[0].size - m, by - items[0].size);
+    put(items[1], m + rnd(0, 30), by - items[1].size - rnd(0, 50));
+    put(items[2], W - items[2].size - m * 0.5, clamp(rnd(0.18, 0.36) * H, 70, by - items[0].size - items[2].size - 16));
+  } else {
+    const m = 8;
+    const by = H - 76;
+    put(items[0], W - items[0].size - m, by - items[0].size - rnd(0, 40));
+    put(items[1], m, by - items[1].size - rnd(0, 40));
+  }
+  return out.map((p, slot) => ({ ...p, slot }));
 }
 
-// The one cup. It lives in a fixed layer so it follows you down the page: drag it around,
-// tip it (wheel, rim handle, arrow keys, or the tip button), pour it out, and a moka pot
-// swoops in with a fresh cup and fills it again. Double-click, C, or the swap button changes cups.
+// The cups live in a fixed layer so they follow you down the page. All five are out at once, each
+// with its own drink, physics, refill pot and stains. One shared loop (world.js) drives them all.
 export function CoffeeToys({ dark = false }) {
-  const reduce = usePrefersReducedMotion();
-  const [size, setSize] = useState(() => cupSizeFor(window.innerWidth));
-  const h = size;
-  const k = size / CUP_VB.w;
+  const [tier, setTier] = useState(() => tierFor(window.innerWidth));
+  useEffect(() => {
+    const on = () => setTier(tierFor(window.innerWidth));
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return <Toys key={tier} tier={tier} dark={dark} />;
+}
 
+function Toys({ tier, dark }) {
+  const reduce = usePrefersReducedMotion();
   const layerRef = useRef(null);
+  const spillRef = useRef(null);
+  const engine = useRef({ z: 10 }).current;
+  const plan = useMemo(() => planCups(tier), [tier]);
+
+  useEffect(() => {
+    world.reduce = reduce;
+  }, [reduce]);
+
+  useEffect(() => {
+    const spill = new Spill(layerRef.current);
+    spillRef.current = spill;
+    const sim = { step: (dt) => spill.update(dt) };
+    world.sims.add(sim);
+    spill.wake = () => world.wake();
+    world.wake();
+    return () => {
+      world.sims.delete(sim);
+      spill.clear();
+    };
+  }, []);
+
+  return (
+    <div ref={layerRef} className="pointer-events-none fixed inset-0 z-[46] overflow-hidden">
+      {Array.from({ length: STAIN_COUNT }, (_, i) => (
+        <div key={i} data-stain className="absolute left-0 top-0" aria-hidden="true">
+          <span className="absolute inset-0 rounded-[50%] opacity-0" style={{ background: "#7A4A2B" }} />
+          <span className="absolute inset-0 rounded-[50%] border-2 opacity-0" style={{ borderColor: "#7A4A2B" }} />
+        </div>
+      ))}
+
+      {plan.map((p) => (
+        <CoffeeCup key={p.def.id} p={p} dark={dark} reduce={reduce} layerRef={layerRef} spillRef={spillRef} engine={engine} />
+      ))}
+
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ zIndex: 90 }} aria-hidden="true">
+        {plan.map((p) => (
+          <g key={p.def.id}>
+            <g data-stream-slot={p.slot} style={{ opacity: 0, transition: "opacity 150ms" }}>
+              <path fill={p.def.pour[0]} />
+              <path fill={p.def.pour[1]} />
+            </g>
+            <g data-brew-slot={p.slot} fill="none" strokeLinecap="round" style={{ opacity: 0, transition: "opacity 150ms" }}>
+              <path stroke={p.def.pour[0]} />
+              <path stroke={p.def.pour[1]} />
+            </g>
+          </g>
+        ))}
+      </svg>
+      {Array.from({ length: DROP_COUNT }, (_, i) => (
+        <span
+          key={i}
+          data-drop
+          aria-hidden="true"
+          className="absolute left-0 top-0 block rounded-full opacity-0"
+          style={{ width: 6, height: 8, marginLeft: -3, marginTop: -4, background: "#9A6338", boxShadow: "0 0 0 1px #2A1A12", zIndex: 95 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
+  const { def, size, slot } = p;
+  const k = size / CUP_VB.w;
+  const [ccx, ccy] = def.col.c;
+  const uid = useId().replace(/:/g, "");
+
   const boxRef = useRef(null);
   const counterRef = useRef(null);
-  const wakeRef = useRef(() => {});
-  const spillRef = useRef(null);
+  const bodyRef = useRef(null);
+  const simRef = useRef({ kick: () => {} });
   const phase = useRef("idle");
   const tipAnim = useRef(null);
-  const swapping = useRef(false);
   const reduceRef = useRef(reduce);
   reduceRef.current = reduce;
-  const sizeRef = useRef({ size, h, k });
-  sizeRef.current = { size, h, k };
-  const dragControls = useDragControls();
-
-  const [cupIdx, setCupIdx] = useState(0);
-  const cupIdxRef = useRef(0);
-  const def = CUPS[cupIdx];
   const defRef = useRef(def);
-  defRef.current = def;
-  const geomRef = useRef(geomOf(CUPS[0].id));
+  const geomRef = useRef(geomOf(def.id));
+  const lid = useRef({ off: false });
   const cupVer = useMotionValue(0);
   const slosh = useMotionValue(0);
-
   const popS = useMotionValue(1);
-  const popY = useMotionValue(0);
-  const popR = useMotionValue(0);
-  const popO = useMotionValue(1);
+  const lidT = useMotionValue(0);
+  const heartT = useMotionValue(1);
+  const bump = useMotionValue(0);
+  const z = useMotionValue(slot + 1);
 
-  const start = useMemo(() => startPose(size), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const x = useMotionValue(start.x);
-  const y = useMotionValue(start.y);
-  const angle = useMotionValue(0);
+  const x = useMotionValue(p.left);
+  const y = useMotionValue(p.top);
+  const angle = useMotionValue(p.angle);
   const swayTarget = useMotionValue(0);
   const sway = useSpring(swayTarget, { stiffness: 130, damping: 7, mass: 0.7 });
-  const rotation = useTransform([angle, sway], ([a, s]) => a + s);
+  const rotation = useTransform([angle, sway, bump], ([a, s, b]) => a + s + b);
   const level = useMotionValue(1);
   const fillD = useTransform([level, rotation, slosh, cupVer], ([l, r, s]) => liquidPaths(geomRef.current, l, r + s).fill);
   const surfD = useTransform([level, rotation, slosh, cupVer], ([l, r, s]) => liquidPaths(geomRef.current, l, r + s).surface);
   const steamOpacity = useTransform([level, rotation], ([l, r]) => (l < 0.04 ? 0 : 1 - clamp((Math.abs(r) - 18) / 24, 0, 1)));
   const heartY = useTransform([level, cupVer], ([l]) => levelY(geomRef.current, l) + 1.2);
-  const heartOp = useTransform([level, rotation, cupVer], ([l, r]) => (geomRef.current.def.heart && l > 0.25 && Math.abs(r) < 6 ? 0.95 : 0));
+  const heartOp = useTransform([level, rotation, cupVer, heartT], ([l, r, , h]) => (def.heart && l > 0.25 && Math.abs(r) < 6 ? 0.95 * h : 0));
+  const lidY = useTransform(lidT, (v) => v * -28);
+  const lidR = useTransform(lidT, (v) => v * -20);
   const [empty, setEmpty] = useState(false);
   const [tipped, setTipped] = useState(false);
-  const [bounds, setBounds] = useState(() => ({ left: 0, top: 0, right: window.innerWidth - size, bottom: window.innerHeight - h - 44 }));
 
-  // Keep the cup on screen when the window changes.
-  useEffect(() => {
-    const onResize = () => {
-      const s = cupSizeFor(window.innerWidth);
-      setSize(s);
-      setBounds({ left: 0, top: 0, right: window.innerWidth - s, bottom: window.innerHeight - s - 44 });
-      x.set(clamp(x.get(), 0, Math.max(0, window.innerWidth - s)));
-      y.set(clamp(y.get(), 0, Math.max(0, window.innerHeight - s - 44)));
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [x, y]);
+  const setLid = useCallback(
+    (off) => {
+      if (!def.open || lid.current.off === off) return;
+      lid.current.off = off;
+      geomRef.current = geomOf(def.id, off);
+      cupVer.set(cupVer.get() + 1);
+      if (reduceRef.current) lidT.set(off ? 1 : 0);
+      else animate(lidT, off ? 1 : 0, { type: "spring", stiffness: off ? 240 : 420, damping: off ? 13 : 11 });
+      world.wake();
+    },
+    [def, cupVer, lidT]
+  );
 
   const setUserAngle = useCallback(
     (v) => {
       tipAnim.current?.stop();
-      angle.set(clamp(v, -170, 170));
+      angle.set(clamp(v, -170, 190));
     },
     [angle]
   );
-
   const tipTo = useCallback(
     (deg) => {
       tipAnim.current?.stop();
@@ -112,180 +237,221 @@ export function CoffeeToys({ dark = false }) {
     },
     [angle]
   );
-
   const upright = useCallback(() => {
     tipAnim.current?.stop();
     tipAnim.current = animate(angle, 0, { type: "spring", stiffness: 140, damping: 15 });
     return tipAnim.current;
   }, [angle]);
 
-  // Cup swap: the old cup pops out, the next one pops in. Level carries over.
-  const swapTo = useCallback(
-    async (idx) => {
-      if (swapping.current) return;
-      swapping.current = true;
-      tipAnim.current?.stop();
-      const commit = () => {
-        angle.set(0);
-        cupIdxRef.current = idx;
-        geomRef.current = geomOf(CUPS[idx].id);
-        setCupIdx(idx);
-        cupVer.set(cupVer.get() + 1);
-        wakeRef.current();
-      };
-      if (reduceRef.current) {
-        commit();
-      } else {
-        const dirn = Math.random() < 0.5 ? -1 : 1;
-        await Promise.all([
-          animate(popS, 0.5, { duration: 0.15, ease: "easeIn" }),
-          animate(popY, 30, { duration: 0.15, ease: "easeIn" }),
-          animate(popR, dirn * 16, { duration: 0.15, ease: "easeIn" }),
-          animate(popO, 0, { duration: 0.15, ease: "easeIn" }),
-        ]);
-        commit();
-        popO.set(0);
-        await Promise.all([
-          animate(popS, [0.55, 1.1, 1], { duration: 0.4, times: [0, 0.6, 1], ease: "easeOut" }),
-          animate(popY, [-34, 4, 0], { duration: 0.4, times: [0, 0.6, 1], ease: "easeOut" }),
-          animate(popR, [-dirn * 10, dirn * 3, 0], { duration: 0.4, times: [0, 0.6, 1], ease: "easeOut" }),
-          animate(popO, 1, { duration: 0.12 }),
-        ]);
-      }
-      swapping.current = false;
-    },
-    [angle, cupVer, popO, popR, popS, popY]
-  );
-
-  const swapNext = useCallback(() => swapTo((cupIdxRef.current + 1) % CUPS.length), [swapTo]);
-  const trySwap = useCallback(() => {
-    if (phase.current === "idle") swapNext();
-  }, [swapNext]);
-
-  // Physics and particles: one rAF loop that sleeps whenever nothing is pouring, sloshing or flying.
+  // The collider: a capsule around the cup's body, owned by the shared physics world.
   useEffect(() => {
-    const layer = layerRef.current;
-    const spill = new Spill(layer);
-    spillRef.current = spill;
-    let raf = 0;
-    let running = false;
-    let last = 0;
+    const bounds = () => {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      // The body (not the empty box around it) has to stay on screen.
+      const ex = (def.col.h[0] + def.col.r) * k + 2;
+      const ey = (def.col.h[1] + def.col.r) * k;
+      return { l: ex, r: Math.max(ex, W - ex), t: Math.max(ey, 56 + ey), b: Math.max(56 + ey, H - size - 44 + ccy * k) };
+    };
+    const b = {
+      kind: "cup",
+      x: p.left + ccx * k,
+      y: p.top + ccy * k,
+      hx: def.col.h[0] * k,
+      hy: def.col.h[1] * k,
+      r: def.col.r * k,
+      mass: def.mass * (size / 176) ** 2,
+      damp: 3.2,
+      bounds,
+      sync: () => {
+        x.set(b.x - ccx * k);
+        y.set(b.y - ccy * k);
+        swayTarget.set(clamp(b.vx * 0.011, -16, 16));
+      },
+      onGrab: () => {
+        z.set(++engine.z);
+        boxRef.current?.focus({ preventScroll: true });
+        tipAnim.current?.stop();
+      },
+      onRelease: (v) => {
+        swayTarget.set(0);
+        const speed = Math.hypot(v[0], v[1]);
+        if (speed > 1600 && level.get() > 0.05 && !reduceRef.current) {
+          const { point } = lowLip(geomRef.current, rotation.get(), x.get(), y.get(), k);
+          spillRef.current?.burst(point[0], point[1], (v[0] / speed) * 0.6, (v[1] / speed) * 0.6, 3 + Math.round(Math.min(3, speed / 1200)), def.pour[2]);
+          level.set(Math.max(0, level.get() - 0.05));
+        }
+      },
+      hit: ({ speed, nx, other }) => {
+        if (reduceRef.current) return;
+        const share = other ? other.mass / (other.mass + b.mass) : 0.35;
+        const m = clamp(speed / 1800, 0.1, 1);
+        // Squash, then spring back; lean away from the hit; kick the surface.
+        popS.set(1 - 0.06 * m * (0.6 + share));
+        animate(popS, 1, { type: "spring", stiffness: 320, damping: 7 });
+        const kick = clamp(-nx * speed * 0.012 * (0.35 + share * 1.2), -9, 9) || (Math.random() - 0.5) * m * 8;
+        bump.set(kick);
+        animate(bump, 0, { type: "spring", stiffness: 130, damping: 6 });
+        simRef.current.kick(kick * 1.2);
+        if (other?.kind === "cup" && speed > 650 && level.get() > 0.12 && phase.current !== "refill") {
+          const g = geomRef.current;
+          const pt = worldPoint(g, g.lips[0].p, rotation.get(), x.get(), y.get(), k);
+          spillRef.current?.burst(pt[0], pt[1], -nx * 0.5, -0.6, 2 + Math.round(m * 2), def.pour[2]);
+          level.set(Math.max(0, level.get() - 0.015 * m));
+        }
+        world.wake();
+      },
+    };
+    bodyRef.current = b;
+    const remove = world.add(b);
+    const onResize = () => {
+      const B = bounds();
+      b.x = clamp(b.x, B.l, B.r);
+      b.y = clamp(b.y, B.t, B.b);
+      b.sync();
+      world.needsRelax = true;
+      world.wake();
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      remove();
+    };
+  }, [def, size, k, ccx, ccy, p.left, p.top, x, y, swayTarget, z, engine, level, rotation, popS, bump, spillRef]);
+
+  // Per-frame cup physics, run by the shared world loop: slosh, pouring (partial tilt trickle,
+  // full-tip dump), the paper cup's lid.
+  useEffect(() => {
     let lastPhi = rotation.get();
     let sl = 0;
     let sv = 0;
     let flowStr = "0";
+    let dumpOn = false;
+    const wrap = (a) => Math.abs((((a + 180) % 360) + 360) % 360 - 180);
 
-    const tick = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      const g = geomRef.current;
-      const phi = rotation.get();
-      const lv = level.get();
-      const { k: kk } = sizeRef.current;
+    const sim = {
+      kick: (v) => {
+        sv += v;
+        world.wake();
+      },
+      step: (dt) => {
+        const spill = spillRef.current;
+        if (!spill) return false;
+        const phi = rotation.get();
+        const lv = level.get();
 
-      // Surface slosh: a damped spring, kicked by how fast the cup is turning.
-      if (!reduceRef.current && lv > 0.003) {
-        sv += clamp(phi - lastPhi, -14, 14) * 5;
-        const n = Math.max(1, Math.ceil(dt * 120));
-        const hs = dt / n;
-        for (let i = 0; i < n; i++) {
-          sv += (-SLOSH_W * SLOSH_W * sl - 2 * SLOSH_Z * SLOSH_W * sv) * hs;
-          sl += sv * hs;
+        if (def.open) {
+          const a = wrap(phi);
+          if (!lid.current.off && a >= 98 && lv > 0.02 && phase.current === "idle") setLid(true);
+          else if (lid.current.off && a < 35 && phase.current === "idle" && lv > 0.002) setLid(false);
         }
-        sl = clamp(sl, -16, 16);
-        if (Math.abs(sl) < 0.03 && Math.abs(sv) < 0.08) {
+        const g = geomRef.current;
+
+        // Surface slosh: a damped spring, kicked by how fast the cup is turning.
+        if (!reduceRef.current && lv > 0.003) {
+          sv += clamp(phi - lastPhi, -14, 14) * 5;
+          const n = Math.max(1, Math.ceil(dt * 120));
+          const hs = dt / n;
+          for (let i = 0; i < n; i++) {
+            sv += (-SLOSH_W * SLOSH_W * sl - 2 * SLOSH_Z * SLOSH_W * sv) * hs;
+            sl += sv * hs;
+          }
+          sl = clamp(sl, -16, 16);
+          if (Math.abs(sl) < 0.03 && Math.abs(sv) < 0.08) {
+            sl = 0;
+            sv = 0;
+          }
+        } else {
           sl = 0;
           sv = 0;
         }
-      } else {
-        sl = 0;
-        sv = 0;
-      }
-      lastPhi = phi;
-      if (slosh.get() !== sl) slosh.set(sl);
+        lastPhi = phi;
+        if (slosh.get() !== sl) slosh.set(sl);
 
-      let pouring = false;
-      let flow = 0;
-      if (phase.current !== "refill" && lv > 0) {
-        const st = pourStep(g, lv, phi + sl, dt);
-        if (st.level !== lv) level.set(st.level);
-        if (st.flow > 0) {
-          pouring = true;
-          flow = st.flow;
-          if (!reduceRef.current) {
-            const { point, dir } = lowLip(g, phi, x.get(), y.get(), kk);
-            const speed = Math.max(28, Math.sqrt(2 * G * Math.min(st.head, g.headMax) * kk));
-            const H = window.innerHeight;
-            const x0 = point[0] + dir[0] * 2;
-            const y0 = point[1] + dir[1] * 2;
-            const w = Math.min(clamp(0.28 * Math.sqrt(st.flow) * (0.55 + 0.45 * Math.min(1, kk * 1.4)), 1.1, 12), g.lipW * kk * 0.9);
-            spill.setStream({
-              x0,
-              y0,
-              vx: dir[0] * speed,
-              vy: dir[1] * speed,
-              w,
-              rate: 2 + 0.012 * st.flow,
-              landY: Math.max(y0 + 10, Math.min(H - 4, y0 + H * 0.6)),
-            });
+        let pouring = false;
+        let flow = 0;
+        if (phase.current !== "refill" && lv > 0) {
+          const st = pourStep(g, lv, phi + sl, dt);
+          if (st.level !== lv) level.set(st.level);
+          if (st.flow > 0) {
+            pouring = true;
+            flow = st.flow;
+            if (!reduceRef.current) {
+              const { point, dir } = lowLip(g, phi, x.get(), y.get(), k);
+              const speed = Math.max(28, Math.sqrt(2 * G * Math.min(st.head, g.headMax) * k));
+              const H = window.innerHeight;
+              const x0 = point[0] + dir[0] * 2;
+              const y0 = point[1] + dir[1] * 2;
+              const wMax = Math.min(12 + 20 * st.dw, g.lipW * k * 0.9);
+              const w = Math.min(clamp(0.28 * Math.sqrt(st.flow) * (0.55 + 0.45 * Math.min(1, k * 1.4)), 1.1, 12 + 20 * st.dw), wMax);
+              spill.setStream(slot, {
+                x0,
+                y0,
+                vx: dir[0] * speed,
+                vy: dir[1] * speed,
+                w,
+                rate: Math.min(40, 2 + 0.012 * st.flow),
+                landY: Math.max(y0 + 10, Math.min(H - 4, y0 + H * 0.6)),
+                col: def.pour[2],
+                big: st.dw > 0.4,
+              });
+              // The moment it tips over: a burst of droplets out of the mouth.
+              if (st.dw > 0.5 && !dumpOn && lv > 0.2) {
+                dumpOn = true;
+                spill.burst(point[0], point[1], dir[0], dir[1], 8, def.pour[2]);
+                spill.splash(point[0], point[1], 3, 260, 1.1, def.pour[2]);
+              }
+            }
           }
+          if (st.dw < 0.3) dumpOn = false;
+          const fs = ((flow / g.volA) * 100).toFixed(1);
+          if (fs !== flowStr) {
+            flowStr = fs;
+            boxRef.current.dataset.flow = fs;
+          }
+        } else {
+          if (flowStr !== "0") {
+            flowStr = "0";
+            boxRef.current.dataset.flow = "0";
+          }
+          if (wrap(phi) < 60) dumpOn = false;
         }
-        const fs = ((flow / g.volA) * 100).toFixed(1);
-        if (fs !== flowStr) {
-          flowStr = fs;
-          boxRef.current.dataset.flow = fs;
-        }
-      } else if (flowStr !== "0") {
-        flowStr = "0";
-        boxRef.current.dataset.flow = "0";
-      }
-      if (!pouring) spill.setStream(null);
-      const busy = spill.update(dt);
-      if (pouring || busy || sl !== 0 || sv !== 0) raf = requestAnimationFrame(tick);
-      else running = false;
+        if (!pouring) spill.setStream(slot, null);
+        return pouring || sl !== 0 || sv !== 0;
+      },
     };
-    const wake = () => {
-      if (running) return;
-      running = true;
-      last = performance.now();
-      raf = requestAnimationFrame(tick);
-    };
-    wakeRef.current = wake;
-    spill.wake = wake;
-    const offRot = rotation.on("change", wake);
+    simRef.current = sim;
+    world.sims.add(sim);
+    const offRot = rotation.on("change", () => world.wake());
 
     const box = boxRef.current;
     const offLevel = level.on("change", (v) => {
       const pct = Math.round(v * 100);
       box.dataset.level = String(pct);
       box.dataset.levelExact = (v * 100).toFixed(2);
-      box.setAttribute("aria-label", labelFor(defRef.current, pct));
+      box.setAttribute("aria-label", labelFor(def, pct));
       setEmpty(v <= 0.002);
+      world.wake();
     });
     const offAngle = angle.on("change", (v) => {
       box.dataset.angle = v.toFixed(1);
     });
     box.dataset.level = "100";
     box.dataset.levelExact = "100.00";
-    box.dataset.angle = "0.0";
+    box.dataset.angle = angle.get().toFixed(1);
     box.dataset.flow = "0";
+    box.dataset.cup = def.id;
+    box.setAttribute("aria-label", labelFor(def, 100));
+    world.wake();
 
     return () => {
-      cancelAnimationFrame(raf);
-      running = false;
+      world.sims.delete(sim);
       offRot();
       offLevel();
       offAngle();
-      spill.clear();
+      spillRef.current?.setStream(slot, null); // eslint-disable-line react-hooks/exhaustive-deps
     };
-  }, [rotation, level, angle, x, y, slosh]);
-
-  // Keep the label and the cup id on the element in step with the current cup.
-  useEffect(() => {
-    const box = boxRef.current;
-    box.dataset.cup = def.id;
-    box.setAttribute("aria-label", labelFor(def, Math.round(level.get() * 100)));
-  }, [def, level]);
+  }, [def, rotation, level, angle, x, y, slosh, slot, k, setLid, spillRef]);
 
   // The drink's layers stay level with the world while the cup turns: counter-rotate the gradient.
   useEffect(() => {
@@ -295,12 +461,8 @@ export function CoffeeToys({ dark = false }) {
     };
     apply(rotation.get());
     const off = rotation.on("change", apply);
-    const off2 = cupVer.on("change", () => apply(rotation.get()));
-    return () => {
-      off();
-      off2();
-    };
-  }, [rotation, cupVer]);
+    return off;
+  }, [rotation]);
 
   // Mouse wheel over the cup tips it instead of paging.
   useEffect(() => {
@@ -316,6 +478,15 @@ export function CoffeeToys({ dark = false }) {
 
   useEffect(() => angle.on("change", (v) => setTipped(Math.abs(v) > 30)), [angle]);
 
+  const toggleTip = () => {
+    if (Math.abs(angle.get()) > 30) upright();
+    else {
+      const cx = x.get() + size / 2;
+      const sign = def.pourSign ?? (cx > window.innerWidth / 2 ? -1 : 1);
+      tipTo(sign * (def.tipAngle ?? 105));
+    }
+  };
+
   const onKeyDown = (e) => {
     const step = e.shiftKey ? 15 : 6;
     let used = true;
@@ -323,21 +494,10 @@ export function CoffeeToys({ dark = false }) {
     else if (e.key === "ArrowRight") setUserAngle(angle.get() + step);
     else if (e.key === "t" || e.key === "T" || e.key === "Enter" || e.key === " ") toggleTip();
     else if (e.key === "r" || e.key === "R" || e.key === "Escape") upright();
-    else if (e.key === "c" || e.key === "C") trySwap();
     else used = false;
     if (used) {
       e.preventDefault();
       e.stopPropagation();
-    }
-  };
-
-  const toggleTip = () => {
-    if (Math.abs(angle.get()) > 30) upright();
-    else {
-      const d = defRef.current;
-      const cx = x.get() + sizeRef.current.size / 2;
-      const sign = d.pourSign ?? (cx > window.innerWidth / 2 ? -1 : 1);
-      tipTo(sign * (d.tipAngle ?? 105));
     }
   };
 
@@ -353,6 +513,7 @@ export function CoffeeToys({ dark = false }) {
     const cy = r.top + r.height * (oy / CUP_VB.h);
     const ang = (ev) => (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI;
     handle.current = { cx, cy, last: ang(e), ang };
+    z.set(++engine.z);
     tipAnim.current?.stop();
   };
   const onHandleMove = (e) => {
@@ -369,52 +530,20 @@ export function CoffeeToys({ dark = false }) {
     handle.current = null;
   };
 
-  // Drag: sway with the motion, slosh on a hard flick.
-  const onDrag = (_, info) => swayTarget.set(clamp(info.velocity.x * 0.011, -16, 16));
-  const onDragEnd = (_, info) => {
-    swayTarget.set(0);
-    const speed = Math.hypot(info.velocity.x, info.velocity.y);
-    if (speed > 1600 && level.get() > 0.05 && !reduceRef.current) {
-      const { k: kk } = sizeRef.current;
-      const { point } = lowLip(geomRef.current, rotation.get(), x.get(), y.get(), kk);
-      const nx = info.velocity.x / speed;
-      const ny = info.velocity.y / speed;
-      spillRef.current?.burst(point[0], point[1], nx * 0.6, ny * 0.6, 3 + Math.round(Math.min(4, speed / 1200)));
-      level.set(Math.max(0, level.get() - 0.05));
-    }
-  };
-
   const colorClass = dark ? "text-milk" : "text-espresso";
   const [ox, oy] = def.origin;
   const dr = def.drink;
+  const clipId = `cup-liquid-clip-${uid}`;
+  const gradId = `cup-drink-${uid}`;
 
   const cup = useMemo(
-    () => ({ x, y, size, level, angle, phase, upright, defRef, geomRef, swapNext, wake: () => wakeRef.current() }),
-    [x, y, size, level, angle, upright, swapNext]
+    () => ({ x, y, size, level, angle, phase, upright, defRef, geomRef, slot, setLid, heartT, wake: () => world.wake() }),
+    [x, y, size, level, angle, upright, slot, setLid, heartT]
   );
 
   return (
-    <div ref={layerRef} className="pointer-events-none fixed inset-0 z-[46] overflow-hidden">
-      {Array.from({ length: STAIN_COUNT }, (_, i) => (
-        <div key={i} data-stain className="absolute left-0 top-0" aria-hidden="true">
-          <span className="absolute inset-0 rounded-[50%] opacity-0" style={{ background: "#7A4A2B" }} />
-          <span className="absolute inset-0 rounded-[50%] border-2 opacity-0" style={{ borderColor: "#7A4A2B" }} />
-        </div>
-      ))}
-
-      <motion.div
-        className="group absolute left-0 top-0"
-        style={{ x, y, width: size, height: h }}
-        drag
-        dragControls={dragControls}
-        dragListener={false}
-        dragMomentum
-        dragElastic={0.12}
-        dragConstraints={bounds}
-        dragTransition={{ power: 0.3, timeConstant: 300, bounceStiffness: 240, bounceDamping: 16 }}
-        onDrag={onDrag}
-        onDragEnd={onDragEnd}
-      >
+    <>
+      <motion.div className="group absolute left-0 top-0" style={{ x, y, width: size, height: size, zIndex: z }}>
         <div
           ref={boxRef}
           role="button"
@@ -424,10 +553,11 @@ export function CoffeeToys({ dark = false }) {
           data-cup={def.id}
           data-testid="coffee-cup"
           onKeyDown={onKeyDown}
+          onFocus={() => z.set(++engine.z)}
           className={`relative h-full w-full rounded-md outline-offset-4 focus-visible:outline-2 focus-visible:outline-dashed ${colorClass} transition-colors duration-500`}
           style={{ outlineColor: "#C8955B" }}
         >
-          <motion.div className="h-full w-full" style={{ scale: popS, y: popY, rotate: popR, opacity: popO, originX: 0.5, originY: 0.9 }}>
+          <motion.div className="h-full w-full" style={{ scale: popS, originX: 0.5, originY: 0.9 }}>
             <motion.svg
               aria-hidden="true"
               viewBox={`0 0 ${CUP_VB.w} ${CUP_VB.h}`}
@@ -458,21 +588,21 @@ export function CoffeeToys({ dark = false }) {
                 strokeLinejoin="round"
               >
                 <defs>
-                  <clipPath id="cup-liquid-clip">
+                  <clipPath id={clipId}>
                     <motion.path d={fillD} />
                   </clipPath>
-                  <linearGradient id={`cup-drink-${def.id}`} gradientUnits="userSpaceOnUse" x1="0" y1={dr.y0} x2="0" y2={dr.y1}>
+                  <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1="0" y1={dr.y0} x2="0" y2={dr.y1}>
                     {dr.stops.map(([o, c]) => (
                       <stop key={o} offset={o} stopColor={c} />
                     ))}
                   </linearGradient>
                 </defs>
-                <g clipPath="url(#cup-liquid-clip)" stroke="none">
+                <g clipPath={`url(#${clipId})`} stroke="none">
                   <g ref={counterRef}>
-                    <rect x="-120" y="-120" width="420" height="420" fill={`url(#cup-drink-${def.id})`} />
+                    <rect x="-120" y="-120" width="420" height="420" fill={`url(#${gradId})`} />
                   </g>
                 </g>
-                <g clipPath="url(#cup-liquid-clip)">
+                <g clipPath={`url(#${clipId})`}>
                   <motion.path d={surfD} stroke={dr.surface} strokeWidth={dr.crema * 2} />
                 </g>
                 <motion.path d={surfD} stroke={dr.cremaHi} strokeWidth="1.5" opacity="0.8" />
@@ -483,6 +613,11 @@ export function CoffeeToys({ dark = false }) {
                 </motion.g>
 
                 <CupArt id={def.id} />
+                {def.open && (
+                  <motion.g style={{ y: lidY, rotate: lidR }}>
+                    <CupLid />
+                  </motion.g>
+                )}
 
                 <path
                   d={def.hit}
@@ -492,11 +627,9 @@ export function CoffeeToys({ dark = false }) {
                   strokeWidth="10"
                   style={{ pointerEvents: "all", touchAction: "none" }}
                   onPointerDown={(e) => {
-                    boxRef.current?.focus({ preventScroll: true });
-                    tipAnim.current?.stop();
-                    dragControls.start(e);
+                    if (e.button > 0) return;
+                    world.startDrag(bodyRef.current, e);
                   }}
-                  onDoubleClick={trySwap}
                 />
                 <g
                   className="toy-hit opacity-0 transition-opacity duration-150 group-hover:opacity-90 group-focus-within:opacity-90 [@media(pointer:coarse)]:opacity-70"
@@ -517,46 +650,26 @@ export function CoffeeToys({ dark = false }) {
         </div>
 
         <div className="pointer-events-none absolute right-0 top-full mt-1 flex gap-1.5 lg:left-1/2 lg:right-auto lg:-translate-x-1/2">
-          {[
-            { key: "tip", label: tipped ? "Set the cup upright" : "Tip the cup", text: tipped ? "upright" : "tip", onClick: toggleTip },
-            { key: "swap", label: "Swap cup", text: "swap cup", onClick: trySwap },
-          ].map((b) => (
-            <button
-              key={b.key}
-              type="button"
-              aria-label={b.label}
-              data-testid={`cup-${b.key}`}
-              onClick={b.onClick}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") e.stopPropagation();
-              }}
-              className={`pointer-events-auto inline-flex min-h-9 items-center whitespace-nowrap border border-current px-2.5 font-mono text-[10px] uppercase tracking-[0.18em] opacity-80 transition-opacity duration-150 focus-visible:opacity-100 lg:min-h-7 lg:opacity-0 lg:group-hover:opacity-80 ${colorClass}`}
-            >
-              {b.text}
-            </button>
-          ))}
+          <button
+            type="button"
+            aria-label={tipped ? `Set the ${def.name} upright` : `Tip the ${def.name}`}
+            data-testid="cup-tip"
+            onClick={toggleTip}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+            }}
+            className={`pointer-events-auto inline-flex min-h-9 items-center whitespace-nowrap border border-current px-2.5 font-mono text-[10px] uppercase tracking-[0.18em] opacity-80 transition-opacity duration-150 focus-visible:opacity-100 lg:min-h-7 lg:opacity-0 lg:group-hover:opacity-80 ${colorClass}`}
+          >
+            {tipped ? "upright" : "tip"}
+          </button>
         </div>
       </motion.div>
 
-      <svg data-stream className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-150" aria-hidden="true">
-        <path data-stream-outer fill="#2A1A12" />
-        <path data-stream-inner fill="#B07A4C" />
-      </svg>
-      {Array.from({ length: DROP_COUNT }, (_, i) => (
-        <span
-          key={i}
-          data-drop
-          aria-hidden="true"
-          className="absolute left-0 top-0 block rounded-full opacity-0"
-          style={{ width: 6, height: 8, marginLeft: -3, marginTop: -4, background: "#9A6338", boxShadow: "0 0 0 1px #2A1A12", willChange: "transform" }}
-        />
-      ))}
-
-      <Brewer cup={cup} spill={spillRef} reduce={reduce} />
-    </div>
+      <Brewer cup={cup} spill={spillRef} reduce={reduce} layerRef={layerRef} />
+    </>
   );
 }
 
 function labelFor(def, pct) {
-  return `${def.name}, ${pct}% full. Press T to tip, arrow keys rotate while focused, R to set it upright, C or double-click to swap cups`;
+  return `${def.name}, ${pct}% full. Press T to tip, arrow keys rotate while focused, R to set it upright`;
 }

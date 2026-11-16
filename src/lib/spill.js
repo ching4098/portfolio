@@ -6,58 +6,60 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 
 export class Spill {
   constructor(root) {
-    this.drops = [...root.querySelectorAll("[data-drop]")].map((el) => ({ el, on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, max: 1, landY: 0, stain: true, sz: 1 }));
+    this.drops = [...root.querySelectorAll("[data-drop]")].map((el) => ({ el, on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, max: 1, landY: 0, stain: true, sz: 1, col: "" }));
     this.stains = [...root.querySelectorAll("[data-stain]")];
-    this.streamEl = root.querySelector("[data-stream]");
-    this.outer = root.querySelector("[data-stream-outer]");
-    this.inner = root.querySelector("[data-stream-inner]");
-    this.stream = null;
-    this.acc = 0;
-    this.stainT = 0;
+    // One stream per cup slot: a group holding the outline path and the fill path.
+    this.slots = [...root.querySelectorAll("[data-stream-slot]")].map((g) => ({ g, outer: g.children[0], inner: g.children[1], s: null, acc: 0, stainT: 0 }));
     this.si = 0;
     this.live = 0;
     this.wake = null;
   }
 
   get busy() {
-    return Boolean(this.stream) || this.live > 0;
+    return this.live > 0 || this.slots.some((sl) => sl.s);
   }
 
-  setStream(s) {
+  setStream(i, s) {
+    const sl = this.slots[i];
+    if (!sl) return;
     if (!s) {
-      if (this.stream) {
-        this.stream = null;
-        this.streamEl.style.opacity = "0";
+      if (sl.s) {
+        sl.s = null;
+        sl.g.style.opacity = "0";
       }
       return;
     }
-    if (!this.stream) {
-      this.streamEl.style.opacity = "1";
-      this.stainT = 0.05;
+    if (!sl.s) {
+      sl.g.style.opacity = "1";
+      sl.stainT = 0.05;
     }
-    this.stream = s;
+    sl.s = s;
     this.wake?.();
   }
 
-  drop(x, y, vx, vy, { landY, max = 2.6, stain = true, sz = 1 } = {}) {
+  drop(x, y, vx, vy, { landY, max = 2.6, stain = true, sz = 1, col = "" } = {}) {
     const d = this.drops.find((p) => !p.on);
     if (!d) return;
     Object.assign(d, { on: true, x, y, vx, vy, t: 0, max, landY, stain, sz });
+    if (d.col !== col) {
+      d.col = col;
+      d.el.style.background = col || "#9A6338";
+    }
     this.live++;
     this.wake?.();
   }
 
-  splash(x, y, n = 3, up = 280, scale = 1) {
+  splash(x, y, n = 3, up = 280, scale = 1, col = "") {
     for (let i = 0; i < n; i++) {
-      this.drop(x, y, rnd(-110, 110) * scale, -up * rnd(0.4, 1), { landY: y + 10, max: 0.6, stain: false, sz: rnd(0.45, 0.85) * scale });
+      this.drop(x, y, rnd(-110, 110) * scale, -up * rnd(0.4, 1), { landY: y + 10, max: 0.6, stain: false, sz: rnd(0.45, 0.85) * scale, col });
     }
   }
 
   // Splash whose size follows how hard the drop hit.
-  impact(x, y, speed) {
+  impact(x, y, speed, col = "") {
     const f = Math.min(1, speed / 1000);
     const n = f * 3.2 > Math.random() * 3 ? 1 + Math.round(f * 2) : 0;
-    if (n) this.splash(x, y, n, 60 + 300 * f, 0.5 + 0.7 * f);
+    if (n) this.splash(x, y, n, 60 + 300 * f, 0.5 + 0.7 * f, col);
   }
 
   ribbon(x0, y0, vx, vy, tb, w0, pad) {
@@ -78,11 +80,11 @@ export class Spill {
     return `M${L.join("L")}L${R.reverse().join("L")}Z`;
   }
 
-  burst(x, y, dx, dy, n = 5) {
+  burst(x, y, dx, dy, n = 5, col = "") {
     const landY = Math.min(window.innerHeight - 4, y + window.innerHeight * 0.6);
     for (let i = 0; i < n; i++) {
       const sp = rnd(180, 460);
-      this.drop(x, y, dx * sp + rnd(-90, 90), dy * sp - rnd(80, 260), { landY, sz: rnd(0.7, 1.2) });
+      this.drop(x, y, dx * sp + rnd(-90, 90), dy * sp - rnd(80, 260), { landY, sz: rnd(0.7, 1.2), col });
     }
   }
 
@@ -117,30 +119,32 @@ export class Spill {
   }
 
   update(dt) {
-    const s = this.stream;
-    if (s) {
-      const { x0, y0, vx, vy, w, landY, rate } = s;
+    for (const sl of this.slots) {
+      const s = sl.s;
+      if (!s) continue;
+      const { x0, y0, vx, vy, w, landY, rate, col, big } = s;
       const disc = vy * vy + 2 * G * Math.max(0, landY - y0);
       const T = Math.max(0.06, (-vy + Math.sqrt(disc)) / G);
       // Thin streams break into droplets early; fat ones reach the floor in one piece.
       const tb = Math.min(T, 0.25 + 0.09 * w);
-      this.outer.setAttribute("d", this.ribbon(x0, y0, vx, vy, tb, w, 2.4));
-      this.inner.setAttribute("d", this.ribbon(x0, y0, vx, vy, tb, w, 0));
+      sl.outer.setAttribute("d", this.ribbon(x0, y0, vx, vy, tb, w, 2.4));
+      sl.inner.setAttribute("d", this.ribbon(x0, y0, vx, vy, tb, w, 0));
       const x2 = x0 + vx * T;
       const y2 = y0 + vy * T + 0.5 * G * T * T;
-      this.acc += dt * rate;
-      while (this.acc >= 1) {
-        this.acc -= 1;
+      sl.acc += dt * rate;
+      while (sl.acc >= 1) {
+        sl.acc -= 1;
         const t = tb < T ? rnd(tb * 0.9, T) : rnd(T * 0.5, T);
-        this.drop(x0 + vx * t, y0 + vy * t + 0.5 * G * t * t, vx + rnd(-60, 60), vy + G * t + rnd(-30, 40), { landY, sz: rnd(0.55, 1.05) });
+        this.drop(x0 + vx * t, y0 + vy * t + 0.5 * G * t * t, vx + rnd(-60, 60), vy + G * t + rnd(-30, 40), { landY, sz: rnd(0.55, 1.05), col });
       }
-      this.stainT -= dt;
-      if (this.stainT <= 0) {
-        this.stainT = 0.17;
+      sl.stainT -= dt;
+      if (sl.stainT <= 0) {
+        sl.stainT = big ? 0.12 : 0.17;
         const spd = Math.hypot(vx, vy + G * T);
         if (tb >= T) {
-          this.stainAt(x2 + rnd(-8, 8) * (w / 6), Math.min(y2, landY), rnd(18, 34) + w * 3.2);
-          this.impact(x2, y2, spd * 1.5);
+          this.stainAt(x2 + rnd(-8, 8) * (w / 6), Math.min(y2, landY), rnd(18, 34) + w * (big ? 5 : 3.2));
+          if (big) this.splash(x2, y2, 4, 420, 1.3, col);
+          else this.impact(x2, y2, spd * 1.5, col);
         } else if (Math.random() < 0.5) {
           this.stainAt(x2 + rnd(-12, 12), Math.min(y2, landY), rnd(12, 24));
         }
@@ -171,7 +175,7 @@ export class Spill {
   }
 
   clear() {
-    this.setStream(null);
+    this.slots.forEach((_, i) => this.setStream(i, null));
     this.drops.forEach((d) => {
       d.on = false;
       d.el.style.opacity = "0";

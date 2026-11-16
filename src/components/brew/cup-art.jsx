@@ -42,11 +42,7 @@ const ART = {
       <path d="M52 84 L118 84 L113 124 L57 124 Z" fill="#C8955B" fillOpacity="0.35" />
       <path d="M53 94 L117 94 M55 104 L115 104 M56 114 L114 114" opacity="0.45" strokeWidth="1.4" />
       <path d="M80 98 C80 90 90 90 90 98 C90 104 85 108 85 108 C85 108 80 104 80 98 Z" opacity="0.7" strokeWidth="1.6" />
-      <path d="M41 56 L129 56 L127 49 L43 49 Z" fill="#F4EEE6" fillOpacity="0.16" />
-      <path d="M47 49 C52 40 118 40 123 49" />
-      <path d="M46 52 L124 52" opacity="0.4" strokeWidth="1.4" />
-      <path d="M49 52 C50 46 58 46 59 52" strokeWidth="2.6" />
-      <path d="M52 51 L56 51" stroke="#8C735F" strokeWidth="3.4" />
+      <path d="M46 56 L124 56" strokeWidth="2.6" />
     </>
   ),
   "diner-mug": (
@@ -61,6 +57,19 @@ const ART = {
     </>
   ),
 };
+
+// The paper cup's lid is its own group so it can pop off and click back on.
+export function CupLid() {
+  return (
+    <>
+      <path d="M41 56 L129 56 L127 49 L43 49 Z" fill="#F4EEE6" fillOpacity="0.16" />
+      <path d="M47 49 C52 40 118 40 123 49" />
+      <path d="M46 52 L124 52" opacity="0.4" strokeWidth="1.4" />
+      <path d="M49 52 C50 46 58 46 59 52" strokeWidth="2.6" />
+      <path d="M52 51 L56 51" stroke="#8C735F" strokeWidth="3.4" />
+    </>
+  );
+}
 
 export function CupArt({ id }) {
   return ART[id] || null;
