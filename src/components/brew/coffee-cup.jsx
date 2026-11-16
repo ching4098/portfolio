@@ -258,7 +258,7 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine, mobile = false
   const y = useMotionValue(p.top);
   const angle = useMotionValue(p.angle);
   const swayTarget = useMotionValue(0);
-  const sway = useSpring(swayTarget, { stiffness: 130, damping: 7, mass: 0.7 });
+  const sway = useSpring(swayTarget, { stiffness: 170, damping: 18, mass: 0.7 });
   const rotation = useTransform([angle, sway, bump], ([a, s, b]) => a + s + b);
   const level = useMotionValue(p.startEmpty ? 0 : 1);
   const fillD = useTransform([level, rotation, slosh, cupVer], ([l, r, s]) => liquidPaths(geomRef.current, l, r + s).fill);
@@ -349,14 +349,17 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine, mobile = false
       sync: () => {
         x.set(b.x - ccx * k);
         y.set(b.y - ccy * k);
-        swayTarget.set(clamp(b.vx * 0.011, -16, 16));
+        // Lean a little with the hand that carries it; a cup bouncing on its own stays upright.
+        swayTarget.set(b.held ? clamp(b.vx * 0.006, -8, 8) : 0);
       },
       onGrab: () => {
+        b.held = true;
         z.set(++engine.z);
         boxRef.current?.focus({ preventScroll: true });
         tipAnim.current?.stop();
       },
       onRelease: (v) => {
+        b.held = false;
         swayTarget.set(0);
         const speed = Math.hypot(v[0], v[1]);
         if (speed > 1600 && level.get() > 0.05 && !reduceRef.current) {
@@ -372,10 +375,13 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine, mobile = false
         // Squash, then spring back; lean away from the hit; kick the surface.
         popS.set(1 - 0.06 * m * (0.6 + share));
         animate(popS, 1, { type: "spring", stiffness: 320, damping: 7 });
-        const kick = clamp(-nx * speed * 0.012 * (0.35 + share * 1.2), -9, 9) || (Math.random() - 0.5) * m * 8;
-        bump.set(kick);
-        animate(bump, 0, { type: "spring", stiffness: 130, damping: 6 });
-        simRef.current.kick(kick * 1.2);
+        // A knock tips the cup a few degrees and it settles straight back, no spinning.
+        const kick = clamp(-nx * speed * 0.004 * (0.35 + share), -4, 4);
+        if (Math.abs(kick) > Math.abs(bump.get())) {
+          bump.set(kick);
+          animate(bump, 0, { type: "spring", stiffness: 160, damping: 16 });
+        }
+        simRef.current.kick(kick * 0.8);
         if (other?.kind === "cup" && speed > 650 && level.get() > 0.12 && phase.current !== "refill") {
           const g = geomRef.current;
           const pt = worldPoint(g, g.lips[0].p, rotation.get(), x.get(), y.get(), k);
