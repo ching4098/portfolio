@@ -3,13 +3,14 @@ import { animate, motion, useMotionValue } from "framer-motion";
 import { levelY } from "@/lib/cup-geometry";
 import { PotArt } from "@/components/brew/pots";
 import { POTS } from "@/lib/pots";
+import { textUnder } from "@/lib/avoid";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // One refill device per cup. It waits off screen. When its cup runs dry it flies in (each pot in
 // its own way), tips, pours, and leaves. Several pots can be out at once, each for its own cup.
 export function Brewer({ cup, spill, reduce, layerRef }) {
-  const { x: cupX, y: cupY, size, level, angle, phase, upright, geomRef, defRef, wake, slot, setLid, heartT } = cup;
+  const { x: cupX, y: cupY, size, level, angle, phase, upright, geomRef, defRef, wake, slot, setLid, heartT, fresh, onDry } = cup;
   const potId = defRef.current.pot;
   const pot = POTS[potId];
   const [SPX, SPY] = pot.spout;
@@ -141,12 +142,27 @@ export function Brewer({ cup, spill, reduce, layerRef }) {
 
     const brew = async () => {
       phase.current = "arriving";
+      if (fresh) fresh.current = false;
       await Promise.race([run(upright()), sleep(1200)]);
       if (dead) return;
       const W = window.innerWidth;
       const [mx] = mouth();
       // The pot comes in on whichever side of the cup has more room; the spout points at the cup.
-      const dir = mx > W / 2 ? -1 : 1;
+      let dir = mx > W / 2 ? -1 : 1;
+      // ...unless that side has text under the pot: then it comes in from the clearer side.
+      const boxFor = (d) => {
+        const pr = d > 0 ? -pot.deg : pot.deg;
+        const [cx, cy] = mouth();
+        const kk = k();
+        const [px, py] = poseFor(pr, d, cx - d * pot.aim[0] * kk, cy - pot.aim[1] * kk);
+        const { potW: pW, potH: pH } = live.current;
+        const ox = px + pW / 2;
+        const oy = py + (pH * PVY) / 150;
+        const co = Math.cos((pr * Math.PI) / 180);
+        const si = Math.sin((pr * Math.PI) / 180);
+        return [[px, py], [px + pW, py], [px + pW, py + pH], [px, py + pH]].map(([x, y]) => [ox + (x - ox) * co - (y - oy) * si, oy + (x - ox) * si + (y - oy) * co]);
+      };
+      if (textUnder(boxFor(-dir)) < textUnder(boxFor(dir))) dir = -dir;
       const pourRot = dir > 0 ? -pot.deg : pot.deg;
       flipRef.current.style.transform = dir > 0 ? "" : "scaleX(-1)";
 
@@ -271,7 +287,11 @@ export function Brewer({ cup, spill, reduce, layerRef }) {
       if (timer || dead) return;
       timer = setTimeout(() => {
         timer = 0;
-        if (!dead && phase.current === "idle" && level.get() <= 0.002) brew();
+        if (!dead && phase.current === "idle" && level.get() <= 0.002) {
+          // A phone cup that ran dry swaps for the next type first; the fresh empty cup is then filled.
+          if (onDry && fresh && !fresh.current) onDry();
+          else brew();
+        }
       }, delay);
     };
 
@@ -279,8 +299,11 @@ export function Brewer({ cup, spill, reduce, layerRef }) {
       if (v <= 0.002 && phase.current === "idle") check();
     });
 
+    if (level.get() <= 0.002) check(900); // a fresh empty cup that just popped in
+
     return () => {
       dead = true;
+      if (grp) grp.style.opacity = "0";
       off();
       clearTimeout(timer);
       cancelAnimationFrame(raf);

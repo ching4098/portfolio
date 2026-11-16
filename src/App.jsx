@@ -31,6 +31,7 @@ import {
 import { CoffeeToys } from "@/components/brew/coffee-cup";
 import { useExtraction } from "@/hooks/use-extraction";
 import { useSectionPager } from "@/hooks/use-section-pager";
+import { installAvoid } from "@/lib/avoid";
 
 const PAGER_IDS = ["home", "work", "what-i-do", "projects", "publication", "education", "skills", "about", "contact"];
 
@@ -326,6 +327,7 @@ export default function App() {
     return () => obs.disconnect();
   }, []);
 
+  useEffect(() => installAvoid(), []);
   useEffect(() => setPulse((p) => p + 1), [active]);
   const [extracting, startExtraction] = useExtraction();
   const refill = () => {

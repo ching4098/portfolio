@@ -6,6 +6,7 @@ import { CUPS } from "@/lib/cups";
 import { pourStep } from "@/lib/pour-physics";
 import { G, Spill } from "@/lib/spill";
 import { world } from "@/lib/world";
+import { settleSoon } from "@/lib/avoid";
 import { Brewer } from "@/components/brew/brewer";
 import { CupArt, CupLid, LatteHeart } from "@/components/brew/cup-art";
 
@@ -21,7 +22,9 @@ const WISPS = [
   { d: "M108 66 C101 56 116 48 110 38 C107 33 111 30 110 24", delay: "2.1s" },
 ];
 
-const tierFor = (w) => (w >= 1024 ? "lg" : w >= 640 ? "md" : "sm");
+// sm = phones (< 768px): one cup you swap through the five types. md: three cups. lg: all five.
+const tierFor = (w) => (w >= 1024 ? "lg" : w >= 768 ? "md" : "sm");
+const MOBILE_RESERVE = 56; // room under a phone cup for its 44px buttons
 const shuffle = (a) => {
   const r = [...a];
   for (let i = r.length - 1; i > 0; i--) {
@@ -33,12 +36,12 @@ const shuffle = (a) => {
 
 // Where each cup spawns: random every load, hugging the side margins so the text stays clear.
 // lg: all five, split over the left and right margins in vertical slots (so none overlap).
-// md: three in the corners / edge, sm: two in the bottom corners.
+// md: three in the corners / edge, sm: one in the bottom-right corner (see planMobileCup).
 function planCups(tier) {
   const W = window.innerWidth;
   const H = window.innerHeight;
-  const n = tier === "lg" ? 5 : tier === "md" ? 3 : 2;
-  const base = tier === "lg" ? clamp(W * 0.086, 104, 150) : tier === "md" ? 128 : 88;
+  const n = tier === "lg" ? 5 : tier === "md" ? 3 : 1;
+  const base = tier === "lg" ? clamp(W * 0.086, 104, 150) : 128;
   const hs = tier === "lg" ? clamp(H / 850, 0.7, 1) : 1;
   const picks = shuffle(CUPS).slice(0, n);
   const items = picks.map((def) => ({ def, size: Math.round(base * def.scale * hs), angle: rnd(-6, 6) }));
@@ -83,12 +86,31 @@ function planCups(tier) {
     put(items[1], m + rnd(0, 30), by - items[1].size - rnd(0, 50));
     put(items[2], W - items[2].size - m * 0.5, clamp(rnd(0.18, 0.36) * H, 70, by - items[0].size - items[2].size - 16));
   } else {
-    const m = 8;
-    const by = H - 76;
-    put(items[0], W - items[0].size - m, by - items[0].size - rnd(0, 40));
-    put(items[1], m, by - items[1].size - rnd(0, 40));
+    return [planMobileCup(picks[0])];
   }
   return out.map((p, slot) => ({ ...p, slot }));
+}
+
+// Phones: the single cup. `at` is where the previous cup stood (bottom-centre), so a swap pops in place.
+function planMobileCup(def, at, extra = {}) {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const size = Math.round(clamp(100 * def.scale, 88, 104));
+  let left = W - size - 10;
+  let top = H - size - MOBILE_RESERVE - 8;
+  if (at) {
+    left = at[0] - size / 2;
+    top = at[1] - size;
+  }
+  return {
+    def,
+    size,
+    angle: at ? 0 : rnd(-6, 6),
+    left: clamp(left, 0, W - size),
+    top: clamp(top, 0, H - size - MOBILE_RESERVE),
+    slot: 0,
+    ...extra,
+  };
 }
 
 // The cups live in a fixed layer so they follow you down the page. All five are out at once, each
@@ -108,7 +130,28 @@ function Toys({ tier, dark }) {
   const layerRef = useRef(null);
   const spillRef = useRef(null);
   const engine = useRef({ z: 10 }).current;
-  const plan = useMemo(() => planCups(tier), [tier]);
+  const mobile = tier === "sm";
+  const [mob, setMob] = useState(() => (mobile ? planCups("sm")[0] : null));
+  const mobRef = useRef(mob);
+  const plan = useMemo(() => (mobile ? [mob] : planCups(tier)), [tier, mobile, mob]);
+  const ctl = useRef(null);
+  const swapping = useRef(false);
+
+  // Phones: the old cup pops out, the next type pops in (empty when it is a refill, so the pot fills it).
+  const swap = useCallback((empty = false) => {
+    if (swapping.current || !mobRef.current) return;
+    swapping.current = true;
+    const cur = mobRef.current;
+    const c = ctl.current;
+    const at = c?.at();
+    (c ? c.out() : Promise.resolve()).then(() => {
+      const next = CUPS[(CUPS.findIndex((d) => d.id === cur.def.id) + 1) % CUPS.length];
+      const np = planMobileCup(next, at, { pop: true, startEmpty: empty });
+      mobRef.current = np;
+      swapping.current = false;
+      setMob(np);
+    });
+  }, []);
 
   useEffect(() => {
     world.reduce = reduce;
@@ -128,7 +171,7 @@ function Toys({ tier, dark }) {
   }, []);
 
   return (
-    <div ref={layerRef} className="pointer-events-none fixed inset-0 z-[46] overflow-hidden">
+    <div ref={layerRef} data-toys className="pointer-events-none fixed inset-0 z-[46] overflow-hidden">
       {Array.from({ length: STAIN_COUNT }, (_, i) => (
         <div key={i} data-stain className="absolute left-0 top-0" aria-hidden="true">
           <span className="absolute inset-0 rounded-[50%] opacity-0" style={{ background: "#7A4A2B" }} />
@@ -137,12 +180,23 @@ function Toys({ tier, dark }) {
       ))}
 
       {plan.map((p) => (
-        <CoffeeCup key={p.def.id} p={p} dark={dark} reduce={reduce} layerRef={layerRef} spillRef={spillRef} engine={engine} />
+        <CoffeeCup
+          key={p.def.id}
+          p={p}
+          dark={dark}
+          reduce={reduce}
+          layerRef={layerRef}
+          spillRef={spillRef}
+          engine={engine}
+          mobile={mobile}
+          ctl={ctl}
+          onSwap={swap}
+        />
       ))}
 
       <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ zIndex: 90 }} aria-hidden="true">
         {plan.map((p) => (
-          <g key={p.def.id}>
+          <g key={p.slot}>
             <g data-stream-slot={p.slot} style={{ opacity: 0, transition: "opacity 150ms" }}>
               <path fill={p.def.pour[0]} />
               <path fill={p.def.pour[1]} />
@@ -167,7 +221,7 @@ function Toys({ tier, dark }) {
   );
 }
 
-function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
+function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine, mobile = false, ctl, onSwap }) {
   const { def, size, slot } = p;
   const k = size / CUP_VB.w;
   const [ccx, ccy] = def.col.c;
@@ -191,6 +245,14 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
   const heartT = useMotionValue(1);
   const bump = useMotionValue(0);
   const z = useMotionValue(slot + 1);
+  const fitS = useMotionValue(1);
+  const swapS = useMotionValue(p.pop ? 0 : 1);
+  const swapR = useMotionValue(p.pop ? -16 : 0);
+  const lastTap = useRef(null);
+  const onSwapRef = useRef(onSwap);
+  onSwapRef.current = onSwap;
+  const fresh = useRef(!!p.startEmpty);
+  const reserve = mobile ? MOBILE_RESERVE : 44;
 
   const x = useMotionValue(p.left);
   const y = useMotionValue(p.top);
@@ -198,7 +260,7 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
   const swayTarget = useMotionValue(0);
   const sway = useSpring(swayTarget, { stiffness: 130, damping: 7, mass: 0.7 });
   const rotation = useTransform([angle, sway, bump], ([a, s, b]) => a + s + b);
-  const level = useMotionValue(1);
+  const level = useMotionValue(p.startEmpty ? 0 : 1);
   const fillD = useTransform([level, rotation, slosh, cupVer], ([l, r, s]) => liquidPaths(geomRef.current, l, r + s).fill);
   const surfD = useTransform([level, rotation, slosh, cupVer], ([l, r, s]) => liquidPaths(geomRef.current, l, r + s).surface);
   const steamOpacity = useTransform([level, rotation], ([l, r]) => (l < 0.04 ? 0 : 1 - clamp((Math.abs(r) - 18) / 24, 0, 1)));
@@ -206,7 +268,7 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
   const heartOp = useTransform([level, rotation, cupVer, heartT], ([l, r, , h]) => (def.heart && l > 0.25 && Math.abs(r) < 6 ? 0.95 * h : 0));
   const lidY = useTransform(lidT, (v) => v * -28);
   const lidR = useTransform(lidT, (v) => v * -20);
-  const [empty, setEmpty] = useState(false);
+  const [empty, setEmpty] = useState(!!p.startEmpty);
   const [tipped, setTipped] = useState(false);
 
   const setLid = useCallback(
@@ -251,7 +313,8 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
       // The body (not the empty box around it) has to stay on screen.
       const ex = (def.col.h[0] + def.col.r) * k + 2;
       const ey = (def.col.h[1] + def.col.r) * k;
-      return { l: ex, r: Math.max(ex, W - ex), t: Math.max(ey, 56 + ey), b: Math.max(56 + ey, H - size - 44 + ccy * k) };
+      const out = b.out || 0;
+      return { l: ex - out, r: Math.max(ex, W - ex) + out, t: Math.max(ey, 56 + ey), b: Math.max(56 + ey, H - size - reserve + ccy * k) };
     };
     const b = {
       kind: "cup",
@@ -262,7 +325,27 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
       r: def.col.r * k,
       mass: def.mass * (size / 176) ** 2,
       damp: 3.2,
+      out: 0,
+      fitT: 1,
+      base: { hx: def.col.h[0] * k, hy: def.col.h[1] * k, r: def.col.r * k },
       bounds,
+      // Phone buttons hang under the cup: they must stay off the text too.
+      extra: mobile || window.innerWidth < 1024 ? (cx, cy) => {
+        const l = cx - ccx * k;
+        const t = cy - ccy * k + size + 4;
+        const r = l + size;
+        return [r - (mobile ? 150 : 70), t, r, t + (mobile ? 44 : 36)];
+      } : null,
+      // Settling away from text: shrink the toy (and its collider) when there is no room, 0 hides it.
+      setFit: (f, out, instant) => {
+        b.fitT = f;
+        b.out = out;
+        b.rT = b.base.r * f;
+        b.hxT = b.base.hx * f;
+        b.hyT = b.base.hy * f;
+        if (reduceRef.current || instant) fitS.set(f);
+        else animate(fitS, f, { type: "spring", stiffness: 200, damping: 18 });
+      },
       sync: () => {
         x.set(b.x - ccx * k);
         y.set(b.y - ccy * k);
@@ -317,7 +400,7 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
       window.removeEventListener("resize", onResize);
       remove();
     };
-  }, [def, size, k, ccx, ccy, p.left, p.top, x, y, swayTarget, z, engine, level, rotation, popS, bump, spillRef]);
+  }, [def, size, k, ccx, ccy, reserve, mobile, fitS, p.left, p.top, x, y, swayTarget, z, engine, level, rotation, popS, bump, spillRef]);
 
   // Per-frame cup physics, run by the shared world loop: slosh, pouring (partial tilt trickle,
   // full-tip dump), the paper cup's lid.
@@ -429,19 +512,20 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
       const pct = Math.round(v * 100);
       box.dataset.level = String(pct);
       box.dataset.levelExact = (v * 100).toFixed(2);
-      box.setAttribute("aria-label", labelFor(def, pct));
+      box.setAttribute("aria-label", labelFor(def, pct, mobile));
       setEmpty(v <= 0.002);
       world.wake();
     });
     const offAngle = angle.on("change", (v) => {
       box.dataset.angle = v.toFixed(1);
     });
-    box.dataset.level = "100";
-    box.dataset.levelExact = "100.00";
+    const lv0 = level.get();
+    box.dataset.level = String(Math.round(lv0 * 100));
+    box.dataset.levelExact = (lv0 * 100).toFixed(2);
     box.dataset.angle = angle.get().toFixed(1);
     box.dataset.flow = "0";
     box.dataset.cup = def.id;
-    box.setAttribute("aria-label", labelFor(def, 100));
+    box.setAttribute("aria-label", labelFor(def, Math.round(lv0 * 100), mobile));
     world.wake();
 
     return () => {
@@ -451,7 +535,7 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
       offAngle();
       spillRef.current?.setStream(slot, null); // eslint-disable-line react-hooks/exhaustive-deps
     };
-  }, [def, rotation, level, angle, x, y, slosh, slot, k, setLid, spillRef]);
+  }, [def, rotation, level, angle, x, y, slosh, slot, k, setLid, spillRef, mobile]);
 
   // The drink's layers stay level with the world while the cup turns: counter-rotate the gradient.
   useEffect(() => {
@@ -463,6 +547,35 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
     const off = rotation.on("change", apply);
     return off;
   }, [rotation]);
+
+  // Phone swap: pop in on mount, expose pop-out and position to the layer.
+  useEffect(() => {
+    if (!mobile) return undefined;
+    if (p.pop) {
+      if (reduceRef.current) {
+        swapS.set(1);
+        swapR.set(0);
+      } else {
+        animate(swapS, 1, { type: "spring", stiffness: 330, damping: 10 });
+        animate(swapR, 0, { type: "spring", stiffness: 260, damping: 9 });
+      }
+    }
+    const me = {
+      at: () => [x.get() + size / 2, y.get() + size],
+      out: () => {
+        if (reduceRef.current) return Promise.resolve();
+        return Promise.all([
+          animate(swapS, 0, { duration: 0.22, ease: [0.55, -0.4, 0.9, 0.5] }),
+          animate(swapR, 18, { duration: 0.22, ease: "easeIn" }),
+        ]);
+      },
+    };
+    ctl.current = me;
+    settleSoon([0, 350, 1000]); // the new cup may have popped in over text
+    return () => {
+      if (ctl.current === me) ctl.current = null;
+    };
+  }, [mobile, p.pop, swapS, swapR, x, y, size, ctl]);
 
   // Mouse wheel over the cup tips it instead of paging.
   useEffect(() => {
@@ -494,6 +607,7 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
     else if (e.key === "ArrowRight") setUserAngle(angle.get() + step);
     else if (e.key === "t" || e.key === "T" || e.key === "Enter" || e.key === " ") toggleTip();
     else if (e.key === "r" || e.key === "R" || e.key === "Escape") upright();
+    else if (mobile && (e.key === "c" || e.key === "C")) onSwapRef.current?.();
     else used = false;
     if (used) {
       e.preventDefault();
@@ -530,6 +644,12 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
     handle.current = null;
   };
 
+  // Keep the phone buttons on screen when the cup is dragged against the left edge.
+  const btnX = useTransform(x, (v) => {
+    const right = v + size;
+    return Math.max(0, Math.min(4 - (right - 150), window.innerWidth - 4 - right));
+  });
+
   const colorClass = dark ? "text-milk" : "text-espresso";
   const [ox, oy] = def.origin;
   const dr = def.drink;
@@ -537,8 +657,25 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
   const gradId = `cup-drink-${uid}`;
 
   const cup = useMemo(
-    () => ({ x, y, size, level, angle, phase, upright, defRef, geomRef, slot, setLid, heartT, wake: () => world.wake() }),
-    [x, y, size, level, angle, upright, slot, setLid, heartT]
+    () => ({
+      x,
+      y,
+      size,
+      level,
+      angle,
+      phase,
+      upright,
+      defRef,
+      geomRef,
+      slot,
+      setLid,
+      heartT,
+      fresh,
+      // Phones: a dry cup that has not been refilled yet goes out and the next type comes in.
+      onDry: mobile ? () => onSwapRef.current?.(true) : null,
+      wake: () => world.wake(),
+    }),
+    [x, y, size, level, angle, upright, slot, setLid, heartT, mobile]
   );
 
   return (
@@ -548,8 +685,8 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
           ref={boxRef}
           role="button"
           tabIndex={0}
-          aria-label={labelFor(def, 100)}
-          data-level="100"
+          aria-label={labelFor(def, p.startEmpty ? 0 : 100, mobile)}
+          data-level={p.startEmpty ? "0" : "100"}
           data-cup={def.id}
           data-testid="coffee-cup"
           onKeyDown={onKeyDown}
@@ -557,6 +694,8 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
           className={`relative h-full w-full rounded-md outline-offset-4 focus-visible:outline-2 focus-visible:outline-dashed ${colorClass} transition-colors duration-500`}
           style={{ outlineColor: "#C8955B" }}
         >
+          <motion.div className="h-full w-full" style={{ scale: fitS, originX: ccx / CUP_VB.w, originY: ccy / CUP_VB.h }}>
+          <motion.div className="h-full w-full" style={{ scale: swapS, rotate: swapR, originX: 0.5, originY: 0.9 }}>
           <motion.div className="h-full w-full" style={{ scale: popS, originX: 0.5, originY: 0.9 }}>
             <motion.svg
               aria-hidden="true"
@@ -628,6 +767,17 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
                   style={{ pointerEvents: "all", touchAction: "none" }}
                   onPointerDown={(e) => {
                     if (e.button > 0) return;
+                    if (mobile) {
+                      // Double-tap swaps the cup.
+                      const now = performance.now();
+                      const t = lastTap.current;
+                      if (t && now - t.t < 350 && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 36) {
+                        lastTap.current = null;
+                        onSwapRef.current?.();
+                        return;
+                      }
+                      lastTap.current = { t: now, x: e.clientX, y: e.clientY };
+                    }
                     world.startDrag(bodyRef.current, e);
                   }}
                 />
@@ -647,9 +797,28 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
               </motion.svg>
             </div>
           </motion.div>
+          </motion.div>
+          </motion.div>
         </div>
 
-        <div className="pointer-events-none absolute right-0 top-full mt-1 flex gap-1.5 lg:left-1/2 lg:right-auto lg:-translate-x-1/2">
+        <motion.div
+          className="pointer-events-none absolute right-0 top-full mt-1 flex gap-1.5 lg:left-1/2 lg:right-auto lg:-translate-x-1/2"
+          style={mobile ? { x: btnX } : undefined}
+        >
+          {mobile && (
+            <button
+              type="button"
+              aria-label="Swap cup"
+              data-testid="cup-swap"
+              onClick={() => onSwapRef.current?.()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+              }}
+              className={`pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap border border-current px-3 font-mono text-[10px] uppercase tracking-[0.18em] opacity-80 transition-opacity duration-150 focus-visible:opacity-100 ${colorClass}`}
+            >
+              swap cup
+            </button>
+          )}
           <button
             type="button"
             aria-label={tipped ? `Set the ${def.name} upright` : `Tip the ${def.name}`}
@@ -658,11 +827,11 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") e.stopPropagation();
             }}
-            className={`pointer-events-auto inline-flex min-h-9 items-center whitespace-nowrap border border-current px-2.5 font-mono text-[10px] uppercase tracking-[0.18em] opacity-80 transition-opacity duration-150 focus-visible:opacity-100 lg:min-h-7 lg:opacity-0 lg:group-hover:opacity-80 ${colorClass}`}
+            className={`pointer-events-auto inline-flex ${mobile ? "min-h-11 min-w-11 justify-center px-3" : "min-h-9 px-2.5"} items-center whitespace-nowrap border border-current font-mono text-[10px] uppercase tracking-[0.18em] opacity-80 transition-opacity duration-150 focus-visible:opacity-100 lg:min-h-7 lg:opacity-0 lg:group-hover:opacity-80 ${colorClass}`}
           >
             {tipped ? "upright" : "tip"}
           </button>
-        </div>
+        </motion.div>
       </motion.div>
 
       <Brewer cup={cup} spill={spillRef} reduce={reduce} layerRef={layerRef} />
@@ -670,6 +839,6 @@ function CoffeeCup({ p, dark, reduce, layerRef, spillRef, engine }) {
   );
 }
 
-function labelFor(def, pct) {
-  return `${def.name}, ${pct}% full. Press T to tip, arrow keys rotate while focused, R to set it upright`;
+function labelFor(def, pct, mobile = false) {
+  return `${def.name}, ${pct}% full. Press T to tip, arrow keys rotate while focused, R to set it upright${mobile ? ", C to swap the cup" : ""}`;
 }

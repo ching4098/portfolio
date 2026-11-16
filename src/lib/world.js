@@ -62,6 +62,14 @@ function ends(b) {
   return [b.x - ex, b.y - ey, b.x + ex, b.y + ey];
 }
 
+// Gap between two capsule-shaped things ({x, y, hx, hy, ang, r}); negative when they overlap.
+export function capGap(a, b) {
+  const [ax0, ay0, ax1, ay1] = ends({ ang: 0, hx: 0, hy: 0, ...a });
+  const [bx0, by0, bx1, by1] = ends({ ang: 0, hx: 0, hy: 0, ...b });
+  segSeg(ax0, ay0, ax1, ay1, bx0, by0, bx1, by1);
+  return Math.hypot(out.c2x - out.c1x, out.c2y - out.c1y) - a.r - b.r;
+}
+
 class World {
   constructor() {
     this.bodies = [];
@@ -414,3 +422,4 @@ class World {
 }
 
 export const world = new World();
+if (import.meta.env.DEV && typeof window !== "undefined") window.__world = world; // dev-only handle for debugging and tests

@@ -54,6 +54,7 @@ export function useSectionPager(ids, { reduceMotion } = {}) {
       busy.current = true;
       if (reduceMotion) {
         window.scrollTo(0, top);
+        window.dispatchEvent(new Event("pager:land"));
         setTimeout(() => (busy.current = false), 100);
         return;
       }
@@ -70,6 +71,7 @@ export function useSectionPager(ids, { reduceMotion } = {}) {
       });
       cover.onfinish = () => {
         window.scrollTo(0, top);
+        window.dispatchEvent(new Event("pager:land"));
         const reveal = wipe.animate([{ transform: "translateY(0)" }, { transform: end }], {
           duration: REVEAL_MS,
           easing: "cubic-bezier(0.2, 0.8, 0.3, 1)",

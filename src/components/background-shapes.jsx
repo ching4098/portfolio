@@ -4,6 +4,7 @@ import { world } from "@/lib/world";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { BAYER_4X4 } from "@/lib/dither-pattern";
 import { useToyGestures, DRAG_FEEL } from "@/hooks/use-toy-gestures";
+import { settleSoon } from "@/lib/avoid";
 
 const SECTION_ORDER = ["home", "work", "what-i-do", "projects", "publication", "education", "skills", "about", "contact"];
 const TYPES = ["line", "ring", "steam", "angle", "dither", "line", "ring", "steam", "angle", "dither", "line", "ring"];
@@ -132,6 +133,7 @@ function Shape({ index, type, active, dark, reduceMotion }) {
   const px = useMotionValue(0);
   const py = useMotionValue(0);
   const squash = useMotionValue(1);
+  const fitS = useMotionValue(1);
   const bodyRef = useRef(null);
   const prev = useRef(null);
   const reduceRef = useRef(reduceMotion);
@@ -153,6 +155,19 @@ function Shape({ index, type, active, dark, reduceMotion }) {
       hyT: dims.hy * t.scale,
       r: r0,
       rT: r0,
+      fitT: 1,
+      out: 0,
+      base: { hx: dims.hx * t.scale, hy: dims.hy * t.scale, r: r0 },
+      setFit: (f, out, instant) => {
+        b.fitT = f;
+        b.out = out;
+        const bs = b.base;
+        b.rT = Math.max(0.01, bs.r * f);
+        b.hxT = bs.hx * f;
+        b.hyT = bs.hy * f;
+        if (reduceRef.current || instant) fitS.set(f);
+        else animate(fitS, f, { type: "spring", stiffness: 160, damping: 20 });
+      },
       ang: t.rotate * RAD,
       angT: t.rotate * RAD,
       mass: clamp(0.1 + (r0 * r0) / 12000, 0.08, 0.6),
@@ -164,7 +179,8 @@ function Shape({ index, type, active, dark, reduceMotion }) {
         const ey = Math.abs(b.hxT * s) + Math.abs(b.hyT * c) + b.rT;
         const W = window.innerWidth;
         const H = window.innerHeight;
-        return { l: Math.min(8 + ex, W / 2), r: Math.max(W - 8 - ex, W / 2), t: Math.min(8 + ey, H / 2), b: Math.max(H - 8 - ey, H / 2) };
+        const out = b.out || 0;
+        return { l: Math.min(8 + ex, W / 2) - out, r: Math.max(W - 8 - ex, W / 2) + out, t: Math.min(8 + ey, H / 2), b: Math.max(H - 8 - ey, H / 2) };
       },
       sync: () => {
         px.set(b.x - dims.w / 2);
@@ -197,11 +213,13 @@ function Shape({ index, type, active, dark, reduceMotion }) {
     const offy = b.y - pcy;
     const [ncx, ncy] = center(t);
     p.t = t;
-    b.hxT = dims.hx * scale;
-    b.hyT = dims.hy * scale;
-    b.rT = dims.r * scale;
+    const f = b.fitT ?? 1;
+    b.base = { hx: dims.hx * scale, hy: dims.hy * scale, r: dims.r * scale };
+    b.hxT = dims.hx * scale * f;
+    b.hyT = dims.hy * scale * f;
+    b.rT = Math.max(0.01, dims.r * scale * f);
     b.angT = rotate * RAD;
-    b.mass = clamp(0.1 + (b.rT * b.rT) / 12000, 0.08, 0.6);
+    b.mass = clamp(0.1 + (dims.r * scale) ** 2 / 12000, 0.08, 0.6);
     b.invMass = 1 / b.mass;
     const B = b.bounds();
     b.goal = { x: clamp(ncx + offx, B.l, B.r), y: clamp(ncy + offy, B.t, B.b) };
@@ -212,6 +230,7 @@ function Shape({ index, type, active, dark, reduceMotion }) {
       b.ang = b.angT;
     }
     world.wake();
+    settleSoon([0, 450, 1200]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, x, y, rotate, scale]);
 
@@ -238,6 +257,7 @@ function Shape({ index, type, active, dark, reduceMotion }) {
         transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
       >
         <motion.div style={{ scale: squash }}>
+          <motion.div style={{ scale: fitS }}>
           <motion.div
             className="toy pointer-events-auto relative"
             whileHover={{ scale: 1.18 }}
@@ -252,6 +272,7 @@ function Shape({ index, type, active, dark, reduceMotion }) {
           >
             {type === "line" && <span className="absolute -inset-y-2.5 inset-x-0" />}
             <Render className={dark ? "text-milk" : "text-espresso"} w={w} seed={index} />
+          </motion.div>
           </motion.div>
         </motion.div>
       </motion.div>
