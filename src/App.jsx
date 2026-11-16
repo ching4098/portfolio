@@ -207,15 +207,15 @@ function NavLink({ href, idKey, children, currentKey, pulse, onClick, variant = 
 
 // Every section is a step of the brew. Numbers, edges and angles are uneven on purpose.
 const BREW = {
-  home: { step: "00 · grind · 18g" },
-  work: { step: "01 · pour · past extractions", num: "02", rot: -11, pos: "-right-8 -bottom-12 text-[11rem] lg:text-[16rem]", tilt: 1 },
-  "what-i-do": { step: "02 · froth · 60°c", num: "03", rot: 7, pos: "-left-12 top-24 text-[10rem] lg:text-[14rem]", tilt: -1, jag: true },
-  projects: { step: "03 · side roast", num: "04", rot: -4, pos: "right-10 -top-6 text-[9rem] lg:text-[12rem]", tilt: 1, jag: true },
-  publication: { step: "04 · single origin · CHI 2025", num: "05", rot: 13, pos: "left-[40%] -bottom-16 text-[12rem] lg:text-[18rem]", tilt: -1 },
-  education: { step: "05 · where the beans grew", num: "06", rot: -9, pos: "left-8 bottom-6 text-[8rem] lg:text-[11rem]", tilt: 1, jag: true },
-  skills: { step: "06 · tasting notes", num: "07", rot: 5, pos: "-right-4 -top-8 text-[11rem] lg:text-[15rem]", tilt: -1, jag: true },
-  about: { step: "07 · sip", num: "08", rot: -14, pos: "right-[20%] -bottom-20 text-[12rem] lg:text-[17rem]", tilt: 1 },
-  contact: { step: "08 · refill", num: "09", rot: 10, pos: "right-4 top-16 text-[9rem] lg:text-[13rem]", tilt: -1, jag: true },
+  home: { step: "01 · grind · 18g" },
+  work: { step: "02 · pour · past extractions", num: "02", rot: -11, pos: "-right-8 -bottom-12 text-[11rem] lg:text-[16rem]", tilt: 1 },
+  "what-i-do": { step: "03 · froth · 60°c", num: "03", rot: 7, pos: "-left-12 top-24 text-[10rem] lg:text-[14rem]", tilt: -1, jag: true },
+  projects: { step: "04 · side roast", num: "04", rot: -4, pos: "right-10 -top-6 text-[9rem] lg:text-[12rem]", tilt: 1, jag: true },
+  publication: { step: "05 · single origin · CHI 2025", num: "05", rot: 13, pos: "left-[40%] -bottom-16 text-[12rem] lg:text-[18rem]", tilt: -1 },
+  education: { step: "06 · where the beans grew", num: "06", rot: -9, pos: "left-8 bottom-6 text-[8rem] lg:text-[11rem]", tilt: 1, jag: true },
+  skills: { step: "07 · tasting notes", num: "07", rot: 5, pos: "-right-4 -top-8 text-[11rem] lg:text-[15rem]", tilt: -1, jag: true },
+  about: { step: "08 · sip", num: "08", rot: -14, pos: "right-[20%] -bottom-20 text-[12rem] lg:text-[17rem]", tilt: 1 },
+  contact: { step: "09 · refill", num: "09", rot: 10, pos: "right-4 top-16 text-[9rem] lg:text-[13rem]", tilt: -1, jag: true },
 };
 
 const Section = ({ id, title, wash, indent, labelledBy, tabIndex, compact, children }) => {
