@@ -65,7 +65,6 @@ const PROFILE = {
   now: {
     title: "Software Engineer @ Rakuten",
     period: "May 2026 - Present",
-    blurb: "Rebuilding the platform behind Rakuten's affiliate business, one slow query and one missing event at a time.",
     footer: "Open to talk about more interesting research & work opportunities.",
   },
   contactNote: "Reach out about research, open roles, or engineering work.",
@@ -578,15 +577,6 @@ export default function App() {
                         </div>
                       ))}
                     </dl>
-                    <motion.p
-                      className="pt-4 text-sm"
-                      initial={{ opacity: 0, y: 6 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.35, ease: EASE }}
-                    >
-                      {PROFILE.now.blurb}
-                    </motion.p>
                   </CardContent>
                   <CardFooter className="text-xs text-muted-foreground">{PROFILE.now.footer}</CardFooter>
                 </Card>

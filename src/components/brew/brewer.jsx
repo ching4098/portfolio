@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { animate, motion, useMotionValue } from "framer-motion";
+import { levelY } from "@/lib/cup-geometry";
 
 // A hand-drawn moka pot. Spout tip is at (14, 29) in this 120 x 150 box.
 const SPOUT = [14, 29];
@@ -28,7 +29,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Waits behind the scenes. When the cup runs dry it swoops in, tips, pours a fresh shot, and leaves.
 export function Brewer({ cup, spill, reduce }) {
-  const { x: cupX, y: cupY, size, level, angle, phase, upright } = cup;
+  const { x: cupX, y: cupY, size, level, angle, phase, upright, geomRef, swapNext, wake } = cup;
   const ps = size / 176;
   const potW = 130 * ps;
   const potH = potW * 1.25;
@@ -71,7 +72,8 @@ export function Brewer({ cup, spill, reduce }) {
     };
     const mouth = () => {
       const kk = k();
-      return [cupX.get() + 85 * kk, cupY.get() + 84 * kk];
+      const m = geomRef.current.def.mouth;
+      return [cupX.get() + m[0] * kk, cupY.get() + m[1] * kk];
     };
     const run = (...a) => {
       const list = a.filter(Boolean);
@@ -82,6 +84,12 @@ export function Brewer({ cup, spill, reduce }) {
 
     const brew = async () => {
       phase.current = "arriving";
+      // Empty cup goes out, a fresh one pops in; the pot then fills whichever cup it finds.
+      // Racing a timeout so a visitor grabbing the cup mid-spring cannot leave the pot waiting forever.
+      await Promise.race([run(upright()), sleep(1200)]);
+      if (dead) return;
+      await swapNext();
+      if (dead) return;
       const W = window.innerWidth;
       const [mx] = mouth();
       // The pot sits on whichever side of the cup has more room; the spout points at the cup.
@@ -99,8 +107,6 @@ export function Brewer({ cup, spill, reduce }) {
         return poseFor(0, dir, tx - dir * 70 * ps, ty - 90 * ps);
       };
 
-      await run(upright());
-      if (dead) return;
       await sleep(reduce ? 50 : 250);
       if (dead) return;
 
@@ -157,7 +163,9 @@ export function Brewer({ cup, spill, reduce }) {
           by.set(by.get() + (ty - by.get()) * f);
           const [sx, sy] = spoutNow(dir);
           const [cx, cy] = mouth();
-          const surf = cy + (1 - level.get()) * 56 * k() + 2;
+          const gm = geomRef.current;
+          const lid = gm.def.stream === "lid";
+          const surf = lid ? cy - 2 : cupY.get() + levelY(gm, level.get()) * k() + 2;
           const d = `M${sx.toFixed(1)} ${sy.toFixed(1)}Q${(sx + (cx - sx) * 0.2).toFixed(1)} ${(sy + (surf - sy) * 0.75).toFixed(1)} ${cx.toFixed(1)} ${surf.toFixed(1)}`;
           const w = 5 * (0.5 + 0.5 * k() * 1.4);
           innerRef.current.firstChild.setAttribute("d", d);
@@ -168,7 +176,7 @@ export function Brewer({ cup, spill, reduce }) {
           splashT -= dt;
           if (splashT <= 0) {
             splashT = 0.07;
-            spill.current?.splash(cx + (Math.random() - 0.5) * 30 * k(), surf, 1, 200);
+            spill.current?.splash(cx + (Math.random() - 0.5) * gm.def.spread * k(), surf, 1, 200);
           }
           raf = requestAnimationFrame(frame);
         };
@@ -199,6 +207,7 @@ export function Brewer({ cup, spill, reduce }) {
         bo.set(0);
       }
       phase.current = "idle";
+      wake();
       if (aborted) check(1400);
     };
 

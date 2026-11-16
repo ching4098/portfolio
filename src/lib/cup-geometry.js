@@ -1,15 +1,12 @@
-// Geometry for the interactive cup. Everything is in the cup's own viewBox (170 x 150).
-// The liquid is the part of the bowl polygon below a world-horizontal line, so the surface
-// stays level however far the cup is rotated.
+// Geometry for the interactive cups. Every cup is drawn in the same 170 x 170 viewBox and owns a
+// "cavity" path (the space the drink can occupy). The liquid is the part of that cavity below a
+// world-horizontal line, so the surface stays level however far the cup is rotated.
 
-export const CUP_VB = { w: 170, h: 150, ox: 85, oy: 93 };
-export const RIM = { left: [30, 84], right: [138, 84] };
+import { CUPS } from "@/lib/cups";
 
-const SEGS = [
-  [[30, 84], [28, 84], [118, 82], [138, 84]],
-  [[138, 84], [140, 118], [128, 138], [84, 140]],
-  [[84, 140], [42, 138], [30, 118], [30, 84]],
-];
+export const CUP_VB = { w: 170, h: 170 };
+
+const rad = (d) => (d * Math.PI) / 180;
 
 function bez([a, b, c, d], t) {
   const u = 1 - t;
@@ -19,10 +16,28 @@ function bez([a, b, c, d], t) {
   ];
 }
 
-const BOWL = [];
-SEGS.forEach((seg) => {
-  for (let i = 0; i < 14; i++) BOWL.push(bez(seg, i / 14));
-});
+// Tiny parser for absolute M / L / C / Z path data -> polygon.
+function parseCavity(d) {
+  const tok = d.match(/[MLCZ]|-?\d*\.?\d+/g);
+  const pts = [];
+  let cur = [0, 0];
+  let i = 0;
+  const num = () => parseFloat(tok[i++]);
+  while (i < tok.length) {
+    const c = tok[i++];
+    if (c === "M" || c === "L") {
+      cur = [num(), num()];
+      pts.push(cur);
+    } else if (c === "C") {
+      const p1 = [num(), num()];
+      const p2 = [num(), num()];
+      const p3 = [num(), num()];
+      for (let s = 1; s <= 12; s++) pts.push(bez([cur, p1, p2, p3], s / 12));
+      cur = p3;
+    }
+  }
+  return pts;
+}
 
 function area(poly) {
   let s = 0;
@@ -33,7 +48,6 @@ function area(poly) {
   }
   return Math.abs(s) / 2;
 }
-const BOWL_AREA = area(BOWL);
 
 // Keep the part of poly where dot(p, n) >= d.
 function clip(poly, nx, ny, d, hits) {
@@ -56,68 +70,132 @@ function clip(poly, nx, ny, d, hits) {
 
 const toPath = (poly) => (poly.length < 3 ? "" : `M${poly.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}Z`);
 
-// World "down" expressed in cup-local coordinates for a cup rotated phi degrees clockwise.
+// World "down" in cup-local coordinates for a cup rotated phi degrees clockwise.
 function downOf(phi) {
-  const r = (phi * Math.PI) / 180;
+  const r = rad(phi);
   return [Math.sin(r), Math.cos(r)];
 }
 
-let cacheKey = "";
-let cache = { fill: "", surface: "" };
-
-// level 0..1 -> SVG path data for the liquid body and for the crema line on its surface.
-export function liquidPaths(level, phi) {
-  const key = `${level.toFixed(4)}|${phi.toFixed(2)}`;
-  if (key === cacheKey) return cache;
-  cacheKey = key;
-  if (level <= 0.001) return (cache = { fill: "", surface: "" });
-  if (level >= 0.999) {
-    return (cache = { fill: toPath(BOWL), surface: `M${RIM.left[0]} ${RIM.left[1]}L${RIM.right[0]} ${RIM.right[1]}` });
-  }
-  const [nx, ny] = downOf(phi);
+// Level (0..1) -> area d such that area(clip(poly, n, d)) == want.
+function solveSurface(poly, nx, ny, want) {
   let lo = Infinity;
   let hi = -Infinity;
-  for (const p of BOWL) {
+  for (const p of poly) {
     const s = p[0] * nx + p[1] * ny;
     if (s < lo) lo = s;
     if (s > hi) hi = s;
   }
-  const want = level * BOWL_AREA;
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 22; i++) {
     const mid = (lo + hi) / 2;
-    if (area(clip(BOWL, nx, ny, mid)) > want) lo = mid;
+    if (area(clip(poly, nx, ny, mid)) > want) lo = mid;
     else hi = mid;
   }
-  const hits = [];
-  const poly = clip(BOWL, nx, ny, (lo + hi) / 2, hits);
-  const surface = hits.length >= 2 ? `M${hits[0][0].toFixed(1)} ${hits[0][1].toFixed(1)}L${hits[1][0].toFixed(1)} ${hits[1][1].toFixed(1)}` : "";
-  return (cache = { fill: toPath(poly), surface });
+  return (lo + hi) / 2;
 }
 
-// How much the cup can hold at this tilt before the low lip spills (0..1).
-export function capacityAt(phi) {
-  const [nx, ny] = downOf(phi);
-  const d = Math.max(RIM.left[0] * nx + RIM.left[1] * ny, RIM.right[0] * nx + RIM.right[1] * ny);
-  return Math.min(1, area(clip(BOWL, nx, ny, d)) / BOWL_AREA);
+const compiled = new Map();
+
+// Everything the physics needs about one cup, computed once.
+export function geomOf(id) {
+  if (compiled.has(id)) return compiled.get(id);
+  const def = CUPS.find((c) => c.id === id) || CUPS[0];
+  const poly = parseCavity(def.cavity);
+  const total = area(poly);
+  const volA = total * def.fullFrac; // area that "level 1" stands for
+  const lips = def.lips;
+
+  // Capacity (in level units, can exceed 1) of the cup when the surface sits at the lowest lip,
+  // for every whole degree of tilt. Index 0 is -180 degrees.
+  const table = new Float32Array(361);
+  for (let a = -180; a <= 180; a++) {
+    const [nx, ny] = downOf(a);
+    let d = -Infinity;
+    for (const l of lips) d = Math.max(d, l.p[0] * nx + l.p[1] * ny);
+    table[a + 180] = area(clip(poly, nx, ny, d)) / volA;
+  }
+
+  // Upright surface height for level 0..100.
+  const levelYs = new Float32Array(101);
+  let bottom = -Infinity;
+  for (const p of poly) bottom = Math.max(bottom, p[1]);
+  for (let i = 0; i <= 100; i++) {
+    levelYs[i] = i === 0 ? bottom : solveSurface(poly, 0, 1, (i / 100) * volA);
+  }
+
+  const g = {
+    id: def.id,
+    def,
+    poly,
+    total,
+    volA,
+    table,
+    levelYs,
+    origin: def.origin,
+    lips,
+    lipW: def.lipW,
+    flowK: def.flowK,
+    headMax: def.headMax ?? Infinity,
+    cache: { key: "", val: { fill: "", surface: "" } },
+  };
+  compiled.set(id, g);
+  return g;
+}
+
+// How much the cup can hold at this tilt before the lowest lip spills, in level units.
+// Under 1.5% counts as zero: that is just dregs clinging to the wall.
+export function capacityLevel(g, psi) {
+  let a = ((((psi + 180) % 360) + 360) % 360) - 180;
+  if (a > 180) a = 180;
+  const f = a + 180;
+  const i = Math.min(359, Math.floor(f));
+  const t = f - i;
+  const v = g.table[i] * (1 - t) + g.table[i + 1] * t;
+  return v < 0.015 ? 0 : v;
+}
+
+// Height of the upright surface for a level (0..1), in cup units.
+export function levelY(g, level) {
+  const f = Math.min(100, Math.max(0, level * 100));
+  const i = Math.min(99, Math.floor(f));
+  return g.levelYs[i] * (1 - (f - i)) + g.levelYs[i + 1] * (f - i);
+}
+
+// level 0..1 and the surface angle psi -> SVG path data for the liquid body and its surface line.
+export function liquidPaths(g, level, psi) {
+  const key = `${level.toFixed(4)}|${psi.toFixed(2)}`;
+  if (key === g.cache.key) return g.cache.val;
+  g.cache.key = key;
+  if (level <= 0.001) return (g.cache.val = { fill: "", surface: "" });
+  const [nx, ny] = downOf(psi);
+  const d = solveSurface(g.poly, nx, ny, Math.min(level, 1) * g.volA);
+  const hits = [];
+  const poly = clip(g.poly, nx, ny, d, hits);
+  const surface = hits.length >= 2 ? `M${hits[0][0].toFixed(1)} ${hits[0][1].toFixed(1)}L${hits[1][0].toFixed(1)} ${hits[1][1].toFixed(1)}` : "";
+  return (g.cache.val = { fill: toPath(poly), surface });
 }
 
 // World position of a cup-local point. left/top is the cup box, k the px-per-unit scale.
-export function worldPoint(p, phi, left, top, k) {
-  const r = (phi * Math.PI) / 180;
-  const dx = p[0] - CUP_VB.ox;
-  const dy = p[1] - CUP_VB.oy;
+export function worldPoint(g, p, phi, left, top, k) {
+  const r = rad(phi);
+  const [ox, oy] = g.origin;
+  const dx = p[0] - ox;
+  const dy = p[1] - oy;
   return [
-    left + CUP_VB.ox * k + (dx * Math.cos(r) - dy * Math.sin(r)) * k,
-    top + CUP_VB.oy * k + (dx * Math.sin(r) + dy * Math.cos(r)) * k,
+    left + ox * k + (dx * Math.cos(r) - dy * Math.sin(r)) * k,
+    top + oy * k + (dx * Math.sin(r) + dy * Math.cos(r)) * k,
   ];
 }
 
-// The rim point that is lower in the world, and the direction liquid leaves it.
-export function lowLip(phi, left, top, k) {
-  const a = worldPoint(RIM.left, phi, left, top, k);
-  const b = worldPoint(RIM.right, phi, left, top, k);
-  const useRight = b[1] >= a[1];
-  const r = (phi * Math.PI) / 180;
-  const sign = useRight ? 1 : -1;
-  return { point: useRight ? b : a, dir: [Math.cos(r) * sign, Math.sin(r) * sign] };
+// The lip that is lowest in the world, and the direction liquid leaves it (cup-local `out`, rotated).
+export function lowLip(g, phi, left, top, k) {
+  let best = null;
+  for (const l of g.lips) {
+    const w = worldPoint(g, l.p, phi, left, top, k);
+    if (!best || w[1] > best.point[1]) best = { point: w, out: l.out };
+  }
+  const r = rad(phi);
+  const [ox, oy] = best.out;
+  return { point: best.point, dir: [ox * Math.cos(r) - oy * Math.sin(r), ox * Math.sin(r) + oy * Math.cos(r)] };
 }
+
+export const cupIndex = (id) => Math.max(0, CUPS.findIndex((c) => c.id === id));

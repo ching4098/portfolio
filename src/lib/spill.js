@@ -1,7 +1,7 @@
 // Droplets, the pouring stream and coffee-ring stains. DOM nodes are a fixed pool created
 // by React; this class only moves them with transform and opacity.
 
-const G = 1900;
+export const G = 1900;
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 export class Spill {
@@ -47,10 +47,35 @@ export class Spill {
     this.wake?.();
   }
 
-  splash(x, y, n = 3, up = 280) {
+  splash(x, y, n = 3, up = 280, scale = 1) {
     for (let i = 0; i < n; i++) {
-      this.drop(x, y, rnd(-110, 110), -up * rnd(0.4, 1), { landY: y + 10, max: 0.6, stain: false, sz: rnd(0.45, 0.85) });
+      this.drop(x, y, rnd(-110, 110) * scale, -up * rnd(0.4, 1), { landY: y + 10, max: 0.6, stain: false, sz: rnd(0.45, 0.85) * scale });
     }
+  }
+
+  // Splash whose size follows how hard the drop hit.
+  impact(x, y, speed) {
+    const f = Math.min(1, speed / 1000);
+    const n = f * 3.2 > Math.random() * 3 ? 1 + Math.round(f * 2) : 0;
+    if (n) this.splash(x, y, n, 60 + 300 * f, 0.5 + 0.7 * f);
+  }
+
+  ribbon(x0, y0, vx, vy, tb, w0, pad) {
+    const N = 14;
+    const L = [];
+    const R = [];
+    for (let i = 0; i <= N; i++) {
+      const t = (tb * i) / N;
+      const px = x0 + vx * t;
+      const py = y0 + vy * t + 0.5 * G * t * t;
+      const tx = vx;
+      const ty = vy + G * t;
+      const m = Math.hypot(tx, ty) || 1;
+      const hw = (w0 * (1 - 0.55 * (i / N)) + pad) / 2;
+      L.push(`${(px - (ty / m) * hw).toFixed(1)} ${(py + (tx / m) * hw).toFixed(1)}`);
+      R.push(`${(px + (ty / m) * hw).toFixed(1)} ${(py - (tx / m) * hw).toFixed(1)}`);
+    }
+    return `M${L.join("L")}L${R.reverse().join("L")}Z`;
   }
 
   burst(x, y, dx, dy, n = 5) {
@@ -94,27 +119,31 @@ export class Spill {
   update(dt) {
     const s = this.stream;
     if (s) {
-      const { x0, y0, vx, vy, w, landY } = s;
+      const { x0, y0, vx, vy, w, landY, rate } = s;
       const disc = vy * vy + 2 * G * Math.max(0, landY - y0);
       const T = Math.max(0.06, (-vy + Math.sqrt(disc)) / G);
+      // Thin streams break into droplets early; fat ones reach the floor in one piece.
+      const tb = Math.min(T, 0.25 + 0.09 * w);
+      this.outer.setAttribute("d", this.ribbon(x0, y0, vx, vy, tb, w, 2.4));
+      this.inner.setAttribute("d", this.ribbon(x0, y0, vx, vy, tb, w, 0));
       const x2 = x0 + vx * T;
       const y2 = y0 + vy * T + 0.5 * G * T * T;
-      const d = `M${x0.toFixed(1)} ${y0.toFixed(1)}Q${(x0 + (vx * T) / 2).toFixed(1)} ${(y0 + (vy * T) / 2).toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
-      this.outer.setAttribute("d", d);
-      this.inner.setAttribute("d", d);
-      this.outer.setAttribute("stroke-width", (w + 2.5).toFixed(1));
-      this.inner.setAttribute("stroke-width", w.toFixed(1));
-      this.acc += dt * 30;
+      this.acc += dt * rate;
       while (this.acc >= 1) {
         this.acc -= 1;
-        const t = T * rnd(0.3, 1);
-        this.drop(x0 + vx * t, y0 + vy * t + 0.5 * G * t * t, vx + rnd(-90, 90), vy + G * t + rnd(-30, 50), { landY, sz: rnd(0.6, 1.1) });
+        const t = tb < T ? rnd(tb * 0.9, T) : rnd(T * 0.5, T);
+        this.drop(x0 + vx * t, y0 + vy * t + 0.5 * G * t * t, vx + rnd(-60, 60), vy + G * t + rnd(-30, 40), { landY, sz: rnd(0.55, 1.05) });
       }
       this.stainT -= dt;
       if (this.stainT <= 0) {
         this.stainT = 0.17;
-        this.stainAt(x2 + rnd(-14, 14), Math.min(y2, landY), rnd(26, 62));
-        this.splash(x2, y2, 2, 240);
+        const spd = Math.hypot(vx, vy + G * T);
+        if (tb >= T) {
+          this.stainAt(x2 + rnd(-8, 8) * (w / 6), Math.min(y2, landY), rnd(18, 34) + w * 3.2);
+          this.impact(x2, y2, spd * 1.5);
+        } else if (Math.random() < 0.5) {
+          this.stainAt(x2 + rnd(-12, 12), Math.min(y2, landY), rnd(12, 24));
+        }
       }
     }
     for (const d of this.drops) {
@@ -127,7 +156,10 @@ export class Spill {
         d.on = false;
         this.live--;
         d.el.style.opacity = "0";
-        if (d.stain && d.y >= d.landY && Math.random() < 0.4) this.stainAt(d.x, d.landY, rnd(12, 26));
+        if (d.stain && d.y >= d.landY) {
+          if (Math.random() < 0.4) this.stainAt(d.x, d.landY, rnd(12, 26));
+          this.impact(d.x, d.landY, Math.hypot(d.vx, d.vy));
+        }
         continue;
       }
       const ang = (Math.atan2(d.vy, d.vx) * 180) / Math.PI - 90;
